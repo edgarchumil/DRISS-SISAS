@@ -1,0 +1,67 @@
+<section class="page">
+  <header>
+    <h2>{{ isEdit ? 'Editar insumo' : 'Nuevo insumo' }}</h2>
+    <p>Completa el formulario para registrar el insumo o material.</p>
+  </header>
+
+  <form class="form-card" [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      Categoria
+      <input type="text" formControlName="category" />
+      <span class="field-error" *ngIf="form.controls.category.touched && form.controls.category.invalid">
+        Campo requerido.
+      </span>
+    </label>
+    <label>
+      Codigo
+      <input type="text" formControlName="code" />
+      <span class="field-error" *ngIf="form.controls.code.touched && form.controls.code.invalid">
+        Campo requerido.
+      </span>
+    </label>
+    <label>
+      Material medico quirurgico
+      <input type="text" formControlName="material_name" />
+      <span class="field-error" *ngIf="form.controls.material_name.touched && form.controls.material_name.invalid">
+        Campo requerido.
+      </span>
+    </label>
+    <label>
+      Existencia fisica
+      <input type="number" formControlName="physical_stock" />
+      <span
+        class="field-error"
+        *ngIf="form.controls.physical_stock.touched && form.controls.physical_stock.errors?.['required']"
+      >
+        Valor requerido.
+      </span>
+      <span
+        class="field-error"
+        *ngIf="form.controls.physical_stock.touched && form.controls.physical_stock.errors?.['min']"
+      >
+        No puede ser negativo.
+      </span>
+    </label>
+    <label>
+      Meses de existencia disponible
+      <input type="number" step="0.01" formControlName="months_of_supply" />
+      <span
+        class="field-error"
+        *ngIf="form.controls.months_of_supply.touched && form.controls.months_of_supply.errors?.['required']"
+      >
+        Valor requerido.
+      </span>
+      <span
+        class="field-error"
+        *ngIf="form.controls.months_of_supply.touched && form.controls.months_of_supply.errors?.['min']"
+      >
+        No puede ser negativo.
+      </span>
+    </label>
+
+    <div class="actions">
+      <button type="button" class="secondary" routerLink="/medications">Cancelar</button>
+      <button type="submit" [disabled]="isSaving">Guardar</button>
+    </div>
+  </form>
+</section>

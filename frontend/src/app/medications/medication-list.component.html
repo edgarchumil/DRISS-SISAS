@@ -1,0 +1,184 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Insumos / Materiales</h2>
+      <p>Registro general y control de inventario de insumos y materiales</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="search-row">
+    <input
+      #searchInput
+      type="text"
+      placeholder="Buscar por codigo o material medico..."
+      [value]="searchTerm"
+      (input)="onSearch(searchInput.value)"
+    />
+  </div>
+
+  <div class="municipality-row">
+    <div class="municipality-controls">
+      <label>
+        Municipio
+        <select
+          #municipalitySelect
+          [value]="isAllMunicipalities ? 'all' : (selectedMunicipalityId ?? '')"
+          [disabled]="!isAdmin && !!userMunicipality"
+          (change)="onMunicipalityChange(municipalitySelect.value)"
+        >
+          <option value="all" *ngIf="isAdmin">Todos los municipios</option>
+          <option *ngFor="let municipality of municipalities" [value]="municipality.id">
+            {{ municipality.name }}
+          </option>
+        </select>
+      </label>
+    </div>
+    <button type="button" class="primary-btn" (click)="openModal()" *ngIf="isAdmin">
+      Nuevo insumo
+    </button>
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Categoria</th>
+          <th>Codigo</th>
+          <th>Material medico</th>
+          <th>Promedio mensual</th>
+          <th>Existencia fisica</th>
+          <th>Meses disponibles</th>
+          <th *ngIf="isAdmin">Opciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let medication of paginated; index as i">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td>{{ medication.category }}</td>
+          <td>{{ medication.code }}</td>
+          <td>{{ medication.material_name }}</td>
+          <td>{{ medication.monthly_demand_avg }}</td>
+          <td
+            [ngClass]="getStockClass(getMunicipalityStock(medication.id, medication.physical_stock))"
+          >
+            {{ getMunicipalityStock(medication.id, medication.physical_stock) }}
+          </td>
+          <td>{{ medication.months_of_supply }}</td>
+          <td class="actions" *ngIf="isAdmin">
+            <button class="icon-btn" type="button" aria-label="Editar" (click)="editMedication(medication)">
+              &#9998;
+            </button>
+            <button class="icon-btn danger" type="button" aria-label="Eliminar" (click)="removeMedication(medication)">
+              &#128465;
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" *ngIf="!isLoading && medications.length === 0">
+    No hay insumos registrados.
+  </div>
+
+  <div class="pagination" *ngIf="!isLoading && medications.length > 0">
+    <button type="button" class="page-btn" [disabled]="currentPage === 1" (click)="changePage(-1)">
+      Anterior
+    </button>
+    <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+    <button type="button" class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(1)">
+      Siguiente
+    </button>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-card">
+      <header>
+        <h3>{{ isEdit ? 'Editar insumo' : 'Nuevo insumo' }}</h3>
+        <p>Completa el formulario para registrar el insumo o material.</p>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <label>
+          Categoria
+          <input type="text" formControlName="category" />
+          <span class="field-error" *ngIf="form.controls.category.touched && form.controls.category.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Codigo
+          <input type="text" formControlName="code" />
+          <span class="field-error" *ngIf="form.controls.code.touched && form.controls.code.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Material medico quirurgico
+          <input type="text" formControlName="material_name" />
+          <span class="field-error" *ngIf="form.controls.material_name.touched && form.controls.material_name.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Existencia fisica
+          <input type="number" min="0" step="1" formControlName="physical_stock" />
+          <span
+            class="field-error"
+            *ngIf="form.controls.physical_stock.touched && form.controls.physical_stock.errors?.['required']"
+          >
+            Valor requerido.
+          </span>
+          <span
+            class="field-error"
+            *ngIf="form.controls.physical_stock.touched && form.controls.physical_stock.errors?.['min']"
+          >
+            No puede ser negativo.
+          </span>
+        </label>
+        <label>
+          Meses de existencia disponible
+          <input type="number" step="0.01" formControlName="months_of_supply" />
+          <span
+            class="field-error"
+            *ngIf="form.controls.months_of_supply.touched && form.controls.months_of_supply.errors?.['required']"
+          >
+            Valor requerido.
+          </span>
+          <span
+            class="field-error"
+            *ngIf="form.controls.months_of_supply.touched && form.controls.months_of_supply.errors?.['min']"
+          >
+            No puede ser negativo.
+          </span>
+        </label>
+
+        <div class="field-error" *ngIf="stockSaveError">{{ stockSaveError }}</div>
+
+        <div class="modal-actions">
+          <button type="button" class="secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showConfirm">
+    <div class="confirm-card">
+      <header>
+        <h3>Confirmar eliminacion</h3>
+        <p>Esta accion no se puede deshacer.</p>
+      </header>
+      <p class="confirm-text">
+        Eliminar {{ pendingDelete?.material_name }}?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="cancelDelete()">Cancelar</button>
+        <button type="button" class="danger" (click)="confirmDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</section>
+

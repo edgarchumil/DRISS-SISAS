@@ -1,0 +1,20 @@
+<div class="app-shell" [class.no-panel]="!(showSidePanel$ | async)">
+  <app-side-panel *ngIf="showSidePanel$ | async"></app-side-panel>
+  <main class="content" [class.full]="!(showSidePanel$ | async)">
+    <div class="global-logout-bar" *ngIf="showGlobalLogout$ | async">
+      <button type="button" class="global-logout" (click)="logout()">Salir</button>
+    </div>
+    <router-outlet />
+  </main>
+</div>
+
+<div class="page-loading" *ngIf="pageLoading$ | async">
+  <div class="loader-card">
+    <div class="loader-icon">💧</div>
+    <h3>Cargando, SISAS</h3>
+    <p>Agua, saneamiento y stock en sincronía.</p>
+    <div class="loader-bars">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+</div>

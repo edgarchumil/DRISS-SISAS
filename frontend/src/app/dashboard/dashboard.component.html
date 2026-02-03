@@ -1,0 +1,117 @@
+<section class="dashboard">
+  <div class="main-panel">
+    <header class="topbar">
+      <div>
+        <h2>Inicio</h2>
+        <p>Indicadores claves y seguimiento operativo</p>
+      </div>
+      <button class="icon-btn" aria-label="Salir" (click)="logout()">Salir</button>
+    </header>
+
+    <div class="stat-row">
+      <div class="stat-card primary">
+        <span>Insumos mensuales</span>
+        <div class="monthly-values">
+          <div>Ingreso: {{ stats?.monthly_ingreso ?? 0 | number:'1.0-2' }}</div>
+          <div>Pedido: {{ stats?.monthly_pedido ?? 0 | number:'1.0-2' }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span>Insumos</span>
+        <strong>{{ stats?.materials_total ?? 0 }}</strong>
+        <small>Total registrados</small>
+      </div>
+      <div class="stat-card">
+        <span>Usuarios</span>
+        <strong>{{ stats?.users_active ?? 0 }}</strong>
+        <small>Activos de {{ stats?.users_total ?? 0 }}</small>
+      </div>
+      <div class="stat-card">
+        <span>Calificacion</span>
+        <strong>{{ stats?.service_rating ?? 0 }}</strong>
+        <small>Servicio</small>
+      </div>
+    </div>
+
+    <div class="grid">
+      <article class="panel half">
+        <header>Analisis mensual</header>
+        <div class="monthly-chart" *ngIf="charts?.monthly?.length; else monthlyEmpty">
+          <div class="month-item" *ngFor="let item of charts?.monthly">
+            <div class="bars">
+              <span
+                class="bar ingreso"
+                [style.height.%]="(item.ingreso / getMonthlyMax()) * 100"
+                title="Ingreso {{ item.ingreso }}"
+              ></span>
+              <span
+                class="bar egreso"
+                [style.height.%]="(item.egreso / getMonthlyMax()) * 100"
+                title="Pedido {{ item.egreso }}"
+              ></span>
+            </div>
+            <small>{{ item.month }}</small>
+          </div>
+        </div>
+        <ng-template #monthlyEmpty>
+          <div class="chart-placeholder bars"></div>
+        </ng-template>
+        <button class="panel-action" routerLink="/reports">Ver reporte</button>
+      </article>
+      <article class="panel">
+        <header>Distribucion</header>
+        <div class="distribution" *ngIf="charts?.distribution?.length; else distributionEmpty">
+          <div class="distribution-row" *ngFor="let item of charts?.distribution | slice:0:6">
+            <span>{{ item.municipality }}</span>
+            <div class="bar-track">
+              <span class="bar-fill" [style.width.%]="(item.total / getDistributionMax()) * 100"></span>
+            </div>
+            <strong>{{ item.total }}</strong>
+          </div>
+        </div>
+        <ng-template #distributionEmpty>
+          <div class="chart-placeholder donut"></div>
+        </ng-template>
+        <button class="panel-action" routerLink="/medications">Ver insumos</button>
+      </article>
+      <article class="panel half">
+        <header>Tendencia de abastecimiento</header>
+        <div class="trend-chart" *ngIf="charts?.trend?.length; else trendEmpty">
+          <div class="trend-item" *ngFor="let item of charts?.trend">
+            <span>{{ item.municipality }}</span>
+            <div class="bar-track">
+              <span class="bar-fill" [style.width.%]="(item.total / getTrendMax()) * 100"></span>
+            </div>
+          </div>
+        </div>
+        <ng-template #trendEmpty>
+          <div class="chart-placeholder lines"></div>
+        </ng-template>
+        <button class="panel-action" routerLink="/movements">Ver movimientos</button>
+      </article>
+      <article class="panel">
+        <header>Agenda</header>
+        <div class="calendar-header">
+          <button type="button" class="calendar-nav" (click)="prevMonth()">‹</button>
+          <span class="calendar-title">{{ getMonthLabel() }}</span>
+          <button type="button" class="calendar-nav" (click)="nextMonth()">›</button>
+        </div>
+        <div class="mini-calendar">
+          <span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sa</span><span>Do</span>
+          <button
+            type="button"
+            class="day"
+            *ngFor="let day of calendarDays"
+            [class.is-empty]="!day.label"
+            [class.active]="day.isSelected"
+            [class.today]="day.isToday"
+            (click)="selectDay(day)"
+          >
+            {{ day.label || '' }}
+          </button>
+        </div>
+        <button class="cta" routerLink="/audit">Ver auditoria</button>
+      </article>
+    </div>
+  </div>
+</section>

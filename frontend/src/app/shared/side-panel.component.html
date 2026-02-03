@@ -1,0 +1,18 @@
+<aside class="side-panel">
+  <div class="profile">
+    <div class="avatar">{{ initials }}</div>
+    <div>
+      <h3>{{ displayName }}</h3>
+      <p>{{ currentUser?.email || 'sin-correo' }}</p>
+    </div>
+  </div>
+  <nav class="side-nav">
+    <a class="nav-item" routerLink="/dashboard"><span class="icon">🏠</span>Inicio</a>
+    <a class="nav-item" routerLink="/medications"><span class="icon">🧪</span>Insumos</a>
+    <a class="nav-item" routerLink="/movements"><span class="icon">🔁</span>Movimientos</a>
+    <a class="nav-item" routerLink="/users" *ngIf="isAdmin"><span class="icon">👥</span>Usuarios</a>
+    <a class="nav-item" routerLink="/reports" *ngIf="isAdmin"><span class="icon">📄</span>Reportes</a>
+    <a class="nav-item" routerLink="/audit" *ngIf="isAdmin"><span class="icon">🕵️</span>Auditoria</a>
+    <a class="nav-item" routerLink="/backup" *ngIf="isAdmin"><span class="icon">💾</span>Copia de respaldo</a>
+  </nav>
+</aside>

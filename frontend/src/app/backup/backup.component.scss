@@ -1,0 +1,128 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page-header {
+  background: var(--sisas-card);
+  border-radius: 18px;
+  border: 1px solid var(--sisas-border);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 12px 24px rgba(10, 61, 145, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.page-header p {
+  margin: 0.2rem 0 0 0;
+  color: var(--sisas-muted);
+}
+
+.page-header .logout-btn {
+  background: var(--sisas-blue-200);
+  color: var(--sisas-blue-900);
+  box-shadow: 0 8px 18px rgba(10, 61, 145, 0.12);
+}
+
+.page-header button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, var(--sisas-blue-900), var(--sisas-blue-700));
+  color: #fff;
+  font-weight: 600;
+}
+
+.card {
+  background: var(--sisas-card);
+  border-radius: 16px;
+  padding: 1.2rem 1.5rem;
+  border: 1px solid var(--sisas-border);
+  box-shadow: 0 10px 30px rgba(10, 61, 145, 0.08);
+  display: grid;
+  gap: 0.8rem;
+  max-width: 560px;
+}
+
+.card h3 {
+  margin: 0;
+}
+
+.card p {
+  margin: 0;
+  color: var(--sisas-muted);
+}
+
+.card .primary {
+  justify-self: start;
+  border: none;
+  padding: 0.6rem 1.3rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--sisas-blue-900), var(--sisas-blue-700));
+  color: #fff;
+  font-weight: 600;
+}
+
+.error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+  padding: 2rem;
+}
+
+.modal-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  padding: 1.6rem;
+  box-shadow: 0 25px 60px rgba(10, 61, 145, 0.2);
+  display: grid;
+  gap: 1rem;
+}
+
+.modal-card label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.modal-card input {
+  border-radius: 10px;
+  border: 1px solid var(--sisas-border);
+  padding: 0.6rem 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+
+.modal-actions button {
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--sisas-blue-900), var(--sisas-blue-700));
+  color: #fff;
+  font-weight: 600;
+}
+
+.modal-actions .secondary {
+  background: var(--sisas-blue-200);
+  color: var(--sisas-blue-900);
+}

@@ -1,0 +1,60 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Reportes</h2>
+      <p>Consulta y descarga el reporte mensual por municipio.</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="filters">
+    <label>
+      Municipio
+      <select [(ngModel)]="selectedMunicipalityId">
+        <option [ngValue]="null">Selecciona un municipio</option>
+        <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
+          {{ municipality.name }}
+        </option>
+      </select>
+    </label>
+    <label>
+      Mes
+      <input type="month" [(ngModel)]="selectedMonth" />
+    </label>
+    <div class="filter-actions">
+      <button type="button" (click)="fetchReport()">Ver reporte</button>
+      <button type="button" class="secondary" (click)="downloadReport()">Descargar PDF</button>
+    </div>
+  </div>
+
+  <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="report-card" *ngIf="report && !isLoading">
+    <header>
+      <h3>Reporte mensual</h3>
+      <span>Total movimientos: {{ report.total_ingresos + report.total_pedidos }}</span>
+    </header>
+    <table>
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Categoria</th>
+          <th>Material medico</th>
+          <th>Tipo</th>
+          <th>Usuario</th>
+          <th>Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of report.items">
+          <td>{{ item.code }}</td>
+          <td>{{ item.category }}</td>
+          <td>{{ item.material_name }}</td>
+          <td>{{ item.type === 'ingreso' ? 'Ingreso' : 'Pedido' }}</td>
+          <td>{{ item.user }}</td>
+          <td>{{ item.quantity }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

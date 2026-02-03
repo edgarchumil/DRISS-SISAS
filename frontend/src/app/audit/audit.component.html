@@ -1,0 +1,63 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Auditoria</h2>
+      <p>Historial de movimientos de insumos y materiales.</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="table-card" *ngIf="!isLoading">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Tipo</th>
+          <th>Insumo</th>
+          <th>Cantidad</th>
+          <th>Municipio</th>
+          <th>Usuario</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of paginated; index as i">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td>
+            <span class="badge" [class.egreso]="item.type === 'egreso'">
+              {{ item.type === 'ingreso' ? 'Ingreso' : 'Pedido' }}
+            </span>
+          </td>
+          <td>{{ item.medication }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.municipality }}</td>
+          <td>{{ item.user }}</td>
+          <td>{{ item.date }}</td>
+          <td>{{ item.time }}</td>
+          <td>{{ item.notes }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" *ngIf="!isLoading && movements.length === 0">
+    No hay movimientos registrados.
+  </div>
+
+  <div class="pagination" *ngIf="!isLoading && movements.length > 0">
+    <button type="button" class="page-btn" [disabled]="currentPage === 1" (click)="changePage(-1)">
+      Anterior
+    </button>
+    <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+    <button
+      type="button"
+      class="page-btn"
+      [disabled]="currentPage === totalPages"
+      (click)="changePage(1)"
+    >
+      Siguiente
+    </button>
+  </div>
+</section>

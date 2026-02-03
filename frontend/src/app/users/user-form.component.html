@@ -1,0 +1,67 @@
+<section class="page">
+  <header>
+    <h2>{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+    <p>Define credenciales y roles de acceso.</p>
+  </header>
+
+  <form class="form-card" [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      Usuario
+      <input type="text" formControlName="username" />
+    </label>
+    <label>
+      Correo
+      <input type="email" formControlName="email" />
+    </label>
+    <label>
+      Nombre
+      <input type="text" formControlName="first_name" />
+    </label>
+    <label>
+      Apellido
+      <input type="text" formControlName="last_name" />
+    </label>
+    <label>
+      Municipio
+      <select formControlName="municipality">
+        <option value="">Selecciona un municipio</option>
+        <option *ngFor="let municipality of municipalities" [value]="municipality.name">
+          {{ municipality.name }}
+        </option>
+      </select>
+    </label>
+    <label>
+      Contrasena
+      <input
+        type="password"
+        formControlName="password"
+        [readonly]="isEdit"
+        [class.is-disabled]="isEdit"
+        placeholder="********"
+      />
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" formControlName="is_active" />
+      Usuario activo
+    </label>
+
+    <div class="roles">
+      <span>Roles</span>
+      <div class="role-options">
+        <label class="role" *ngFor="let role of roleOptions">
+          <input
+            type="checkbox"
+            [checked]="(form.value.roles ?? []).includes(role)"
+            (change)="toggleRole(role)"
+          />
+          {{ role }}
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="secondary" routerLink="/users">Cancelar</button>
+      <button type="submit" [disabled]="isSaving">Guardar</button>
+    </div>
+  </form>
+</section>

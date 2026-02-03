@@ -1,0 +1,113 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page-header {
+  background: var(--sisas-card);
+  border-radius: 18px;
+  border: 1px solid var(--sisas-border);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 12px 24px rgba(10, 61, 145, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.page-header p {
+  margin: 0.2rem 0 0 0;
+  color: var(--sisas-muted);
+}
+
+.page-header .logout-btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--sisas-blue-200);
+  color: var(--sisas-blue-900);
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(10, 61, 145, 0.12);
+}
+
+.filters {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  background: var(--sisas-card);
+  padding: 1.2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(10, 61, 145, 0.08);
+}
+
+.filters label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.filters select,
+.filters input {
+  border-radius: 10px;
+  border: 1px solid var(--sisas-border);
+  padding: 0.6rem 0.9rem;
+  background: #fff;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-end;
+}
+
+.filter-actions button {
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--sisas-blue-900), var(--sisas-blue-700));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-actions .secondary {
+  background: var(--sisas-blue-200);
+  color: var(--sisas-blue-900);
+}
+
+.report-card {
+  background: var(--sisas-card);
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(10, 61, 145, 0.08);
+}
+
+.report-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: center;
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--sisas-border);
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #b42318;
+  font-weight: 600;
+}

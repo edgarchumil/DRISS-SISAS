@@ -1,0 +1,51 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-card {
+  display: grid;
+  gap: 1rem;
+  background: var(--sisas-card);
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(10, 61, 145, 0.08);
+  max-width: 720px;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  color: var(--sisas-red-600);
+}
+
+input {
+  border-radius: 10px;
+  border: 1px solid var(--sisas-border);
+  padding: 0.6rem 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
+}
+
+button {
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--sisas-blue-900), var(--sisas-blue-700));
+  color: #fff;
+  font-weight: 600;
+}
+
+.secondary {
+  background: var(--sisas-blue-200);
+  color: var(--sisas-blue-900);
+}

@@ -1,0 +1,167 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Ingresos / pedidos</h2>
+      <p>Registro de movimientos de insumos y materiales.</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="header-actions">
+    <button type="button" class="primary-btn" (click)="openTypeModal()">Registrar movimiento</button>
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Tipo</th>
+          <th>Insumo</th>
+          <th>Cantidad</th>
+          <th>Fecha</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of paginated; index as i">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td>
+            <span class="badge" [class.egreso]="item.type === 'egreso'">
+              {{ item.type === 'ingreso' ? 'Ingreso' : 'Pedido' }}
+            </span>
+          </td>
+          <td>{{ item.medication }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.date }}</td>
+          <td>{{ item.notes || '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" *ngIf="!isLoading && movements.length === 0">
+    No hay movimientos registrados.
+  </div>
+
+  <div class="pagination" *ngIf="!isLoading && movements.length > 0">
+    <button type="button" class="page-btn" [disabled]="currentPage === 1" (click)="changePage(-1)">
+      Anterior
+    </button>
+    <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+    <button
+      type="button"
+      class="page-btn"
+      [disabled]="currentPage === totalPages"
+      (click)="changePage(1)"
+    >
+      Siguiente
+    </button>
+  </div>
+
+  <div class="page-error" *ngIf="lastError">
+    {{ lastError }}
+  </div>
+
+  <div class="modal-overlay" *ngIf="showTypeModal">
+    <div class="confirm-card">
+      <header>
+        <h3>Tipo de movimiento</h3>
+        <p>Selecciona si es ingreso o pedido.</p>
+      </header>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="showTypeModal = false">Cancelar</button>
+        <button type="button" (click)="chooseType('ingreso')">Ingreso</button>
+        <button type="button" class="danger" (click)="chooseType('egreso')">Pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showFormModal">
+    <div class="modal-card">
+      <header>
+        <div class="modal-header-row">
+          <h3>{{ selectedType === 'ingreso' ? 'Nuevo ingreso' : 'Nuevo pedido' }}</h3>
+          <span class="municipality-pill" *ngIf="currentMunicipality">
+            Municipio: {{ currentMunicipality }}
+          </span>
+        </div>
+        <p>Completa el formulario para registrar el movimiento.</p>
+      </header>
+
+      <form [formGroup]="activeForm" (ngSubmit)="submit()">
+        <ng-container *ngIf="selectedType === 'ingreso'; else egresoFormTemplate">
+          <div class="ingreso-list">
+            <div class="ingreso-row" *ngFor="let med of medications">
+              <span>{{ med.material_name }}</span>
+              <input type="number" min="0" [formControlName]="'' + med.id" />
+            </div>
+          </div>
+          <label>
+            Observaciones
+            <textarea rows="3" [formControl]="ingresoNotes"></textarea>
+          </label>
+        </ng-container>
+
+        <ng-template #egresoFormTemplate>
+          <label>
+            Municipio de despacho
+            <select [formControl]="pedidoMunicipalityControl">
+              <option [ngValue]="null">Selecciona un municipio</option>
+              <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
+                {{ municipality.name }}
+              </option>
+            </select>
+          </label>
+          <div class="egreso-list">
+            <div class="ingreso-row" *ngFor="let med of medications">
+              <span>{{ med.material_name }}</span>
+              <input type="number" min="0" [formControlName]="'' + med.id" />
+            </div>
+          </div>
+          <label>
+            Observaciones
+            <textarea rows="3" [formControl]="egresoNotes"></textarea>
+          </label>
+        </ng-template>
+
+        <div class="field-error" *ngIf="movementError">{{ movementError }}</div>
+
+        <div class="modal-actions">
+          <button type="button" class="secondary" (click)="closeFormModal()">Cancelar</button>
+          <button
+            type="button"
+            *ngIf="selectedType === 'ingreso'"
+            (click)="submit()"
+          >
+            Guardar
+          </button>
+          <button
+            type="button"
+            *ngIf="selectedType === 'egreso'"
+            (click)="openConfirmModal()"
+          >
+            Despachar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showConfirmModal">
+    <div class="confirm-card">
+      <header>
+        <h3>Confirmar despacho</h3>
+        <p>¿Deseas despachar los insumos seleccionados?</p>
+      </header>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="closeConfirmModal()">
+          Cancelar
+        </button>
+        <button type="button" class="danger" (click)="confirmPedido()">
+          Despachar
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

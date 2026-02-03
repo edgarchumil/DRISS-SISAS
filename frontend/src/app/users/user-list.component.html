@@ -1,0 +1,170 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Usuarios</h2>
+      <p>Administracion de roles y accesos.</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="search-actions">
+    <div class="search-row">
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar por usuario o nombre..."
+        [value]="searchTerm"
+        (input)="onSearch(searchInput.value)"
+      />
+    </div>
+    <button type="button" class="primary-btn" (click)="openModal()">Nuevo usuario</button>
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Usuario</th>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Municipio</th>
+          <th>Roles</th>
+          <th>Opciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of paginated; index as i">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td>{{ user.username }}</td>
+          <td>{{ user.first_name }} {{ user.last_name }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.municipality || '-' }}</td>
+          <td>{{ formatRoles(user.roles) }}</td>
+          <td class="actions">
+            <button class="icon-btn" type="button" aria-label="Editar" (click)="editUser(user)">
+              &#9998;
+            </button>
+            <button class="icon-btn danger" type="button" aria-label="Eliminar" (click)="removeUser(user)">
+              &#128465;
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" *ngIf="!isLoading && users.length === 0">
+    No hay usuarios registrados.
+  </div>
+
+  <div class="pagination" *ngIf="!isLoading && users.length > 0">
+    <button type="button" class="page-btn" [disabled]="currentPage === 1" (click)="changePage(-1)">
+      Anterior
+    </button>
+    <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+    <button type="button" class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(1)">
+      Siguiente
+    </button>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-card">
+      <header>
+        <h3>{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h3>
+        <p>Define credenciales y roles de acceso.</p>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <label>
+          Usuario
+          <input type="text" formControlName="username" />
+          <span class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Correo
+          <input type="email" formControlName="email" />
+          <span class="field-error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+            Ingresa un correo valido.
+          </span>
+        </label>
+        <label>
+          Nombre
+          <input type="text" formControlName="first_name" />
+          <span class="field-error" *ngIf="form.controls.first_name.touched && form.controls.first_name.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Apellido
+          <input type="text" formControlName="last_name" />
+          <span class="field-error" *ngIf="form.controls.last_name.touched && form.controls.last_name.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <label>
+          Municipio
+          <select formControlName="municipality">
+            <option value="">Selecciona un municipio</option>
+            <option *ngFor="let municipality of municipalities" [value]="municipality.name">
+              {{ municipality.name }}
+            </option>
+          </select>
+        </label>
+        <label>
+          Contrasena
+          <input
+            type="password"
+            formControlName="password"
+            [readonly]="isEdit"
+            [class.is-disabled]="isEdit"
+            placeholder="********"
+          />
+          <span class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+            Campo requerido.
+          </span>
+        </label>
+        <div class="roles">
+          <span>Roles</span>
+          <div class="role-options">
+            <label class="role" *ngFor="let role of roleOptions">
+              <input
+                type="checkbox"
+                [checked]="(form.value.roles ?? []).includes(role.value)"
+                (change)="toggleRole(role.value)"
+              />
+              {{ role.label }}
+            </label>
+          </div>
+          <span class="field-error" *ngIf="form.controls.roles.touched && form.controls.roles.invalid">
+            Selecciona al menos un rol.
+          </span>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" [disabled]="form.invalid">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showConfirm">
+    <div class="confirm-card">
+      <header>
+        <h3>Confirmar eliminacion</h3>
+        <p>Esta accion no se puede deshacer.</p>
+      </header>
+      <p class="confirm-text">
+        Eliminar {{ pendingDelete?.username }}?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="cancelDelete()">Cancelar</button>
+        <button type="button" class="danger" (click)="confirmDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</section>
+

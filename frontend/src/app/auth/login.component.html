@@ -1,0 +1,28 @@
+<div class="auth-shell">
+  <section class="auth-panel">
+    <div class="auth-card">
+      <h1>Acceso al sistema SISAS</h1>
+      <div class="phrase-card" aria-live="polite">
+        <p class="phrase-text">{{ currentPhrase }}</p>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <label>
+          Usuario
+          <input type="text" formControlName="username" />
+        </label>
+        <label>
+          Contrasena
+          <input type="password" formControlName="password" />
+        </label>
+        <button type="submit" [disabled]="isSubmitting">Ingresar</button>
+        <span class="error" *ngIf="errorMessage">{{ errorMessage }}</span>
+      </form>
+    </div>
+  </section>
+
+  <section class="brand-panel">
+    <div class="logo-image">
+      <img src="assets/sisas.png" alt="SISAS - Sistema Integrado" />
+    </div>
+  </section>
+</div>

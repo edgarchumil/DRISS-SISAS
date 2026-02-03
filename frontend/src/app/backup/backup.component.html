@@ -1,0 +1,41 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Copia de respaldo</h2>
+      <p>Descarga una copia completa del sistema.</p>
+    </div>
+    <button type="button" class="logout-btn" (click)="logout()">Salir</button>
+  </header>
+
+  <div class="card">
+    <h3>Respaldo completo</h3>
+    <p>
+      Incluye base de datos y registros del sistema para auditoria y recuperacion.
+    </p>
+    <button type="button" class="primary" (click)="openConfirm()" [disabled]="isLoading">
+      {{ isLoading ? 'Procesando...' : 'Descargar ahora' }}
+    </button>
+  </div>
+
+  <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-card">
+      <header>
+        <h3>Confirmar respaldo</h3>
+        <p>Ingresa tu contrasena para descargar la copia.</p>
+      </header>
+      <label>
+        Contrasena
+        <input type="password" [(ngModel)]="password" />
+      </label>
+      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="closeConfirm()">Cancelar</button>
+        <button type="button" (click)="downloadBackup()" [disabled]="isLoading">
+          {{ isLoading ? 'Procesando...' : 'Descargar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
