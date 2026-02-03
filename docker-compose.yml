@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16
+    container_name: sisas_db
+    environment:
+      POSTGRES_DB: sisas_db
+      POSTGRES_USER: sisas_user
+      POSTGRES_PASSWORD: sisas_pass
+    volumes:
+      - sisas_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    container_name: sisas_backend
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_NAME: sisas_db
+      DB_USER: sisas_user
+      DB_PASS: sisas_pass
+      DB_HOST: db
+      DB_PORT: "5432"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,sisas_backend"
+      DEBUG: "1"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8001"
+
+  frontend:
+    build: ./frontend
+    container_name: sisas_frontend
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: >
+      sh -c "npm install && npm run start -- --host 0.0.0.0 --port 4200 --poll 2000"
+    depends_on:
+      - backend
+
+volumes:
+  sisas_pgdata:

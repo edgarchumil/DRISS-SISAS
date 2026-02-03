@@ -1,0 +1,22 @@
+# env files
+.env
+.env.*
+
+# backups
+backups/
+
+# node / build artifacts
+node_modules/
+dist/
+build/
+
+# python
+.venv/
+__pycache__/
+
+# logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+**/node_modules
+**/.angular
+**/.vscode
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/db.sqlite3
+.git
