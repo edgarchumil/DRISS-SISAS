@@ -39,14 +39,57 @@ export class AuthService {
       );
   }
 
-  logout() {
+  logout(options?: { notifyServer?: boolean }) {
+    const notifyServer = options?.notifyServer ?? true;
     const refresh = this.getRefreshToken();
-    if (refresh) {
+    if (notifyServer && refresh && !this.isTokenExpired(refresh)) {
       this.http.post(`${AUTH_BASE_URL}/logout/`, { refresh }).subscribe({
         next: () => undefined,
         error: () => undefined,
       });
     }
+    this.clearSession();
+  }
+
+  endSession() {
+    this.logout({ notifyServer: false });
+  }
+
+  isAccessTokenExpired() {
+    const token = this.getAccessToken();
+    return token ? this.isTokenExpired(token) : true;
+  }
+
+  hasValidRefreshToken() {
+    const token = this.getRefreshToken();
+    return Boolean(token && !this.isTokenExpired(token));
+  }
+
+  isTokenExpired(token: string) {
+    const payload = this.parseJwtPayload(token);
+    const exp = payload?.['exp'];
+    if (typeof exp !== 'number') {
+      return true;
+    }
+    return exp * 1000 <= Date.now();
+  }
+
+  private parseJwtPayload(token: string): Record<string, unknown> | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      const json = atob(padded);
+      return JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  private clearSession() {
     localStorage.removeItem(this.accessKey);
     localStorage.removeItem(this.refreshKey);
     localStorage.removeItem(this.activityKey);
@@ -69,6 +112,9 @@ export class AuthService {
     const refresh = this.getRefreshToken();
     if (!refresh) {
       return throwError(() => new Error('No refresh token available'));
+    }
+    if (this.isTokenExpired(refresh)) {
+      return throwError(() => new Error('Refresh token expired'));
     }
     return this.http.post<RefreshResponse>(`${AUTH_BASE_URL}/token/refresh/`, { refresh }).pipe(
       tap((token) => {
