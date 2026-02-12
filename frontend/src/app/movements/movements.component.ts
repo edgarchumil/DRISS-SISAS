@@ -57,7 +57,7 @@ export class MovementsComponent implements OnInit {
   currentMunicipality = '';
   movementError = '';
   lastError = '';
-  pedidoMunicipalityControl = new FormControl<number | null>(null);
+  egresoMunicipalityControl = new FormControl<number | null>(null);
 
   ingresoForm = this.fb.group({});
   ingresoNotes = new FormControl('', { nonNullable: true });
@@ -131,7 +131,7 @@ export class MovementsComponent implements OnInit {
   chooseType(type: MovementType) {
     this.selectedType = type;
     if (type === 'egreso') {
-      this.pedidoMunicipalityControl.setValue(null);
+      this.egresoMunicipalityControl.setValue(null);
     }
     this.showTypeModal = false;
     this.openFormModal();
@@ -154,7 +154,7 @@ export class MovementsComponent implements OnInit {
     this.showConfirmModal = false;
   }
 
-  confirmPedido() {
+  confirmEgreso() {
     this.showConfirmModal = false;
     this.submit();
   }
@@ -241,7 +241,7 @@ export class MovementsComponent implements OnInit {
   }
 
   private submitEgreso() {
-    const municipality = this.pedidoMunicipalityControl.value;
+    const municipality = this.egresoMunicipalityControl.value;
     if (!municipality) {
       this.movementError = 'Selecciona el municipio de destino.';
       this.lastError = this.movementError;
@@ -283,7 +283,7 @@ export class MovementsComponent implements OnInit {
           const message =
             errorPayload?.detail ||
             errorPayload?.non_field_errors?.[0] ||
-            'No se pudo guardar todos los pedidos.';
+            'No se pudo guardar todos los egresos.';
           this.movementError = message;
           this.lastError = message;
           return;
@@ -304,7 +304,7 @@ export class MovementsComponent implements OnInit {
         this.showFormModal = false;
         this.egresoForm.reset();
         this.egresoNotes.setValue('');
-        this.pedidoMunicipalityControl.setValue(null);
+        this.egresoMunicipalityControl.setValue(null);
       });
   }
 

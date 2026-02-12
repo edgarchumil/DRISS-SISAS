@@ -13,7 +13,7 @@
         <span>Insumos mensuales</span>
         <div class="monthly-values">
           <div>Ingreso: {{ stats?.monthly_ingreso ?? 0 | number:'1.0-2' }}</div>
-          <div>Pedido: {{ stats?.monthly_pedido ?? 0 | number:'1.0-2' }}</div>
+          <div>Egreso: {{ stats?.monthly_egreso ?? 0 | number:'1.0-2' }}</div>
         </div>
       </div>
       <div class="stat-card">
@@ -47,7 +47,7 @@
               <span
                 class="bar egreso"
                 [style.height.%]="(item.egreso / getMonthlyMax()) * 100"
-                title="Pedido {{ item.egreso }}"
+                title="Egreso {{ item.egreso }}"
               ></span>
             </div>
             <small>{{ item.month }}</small>

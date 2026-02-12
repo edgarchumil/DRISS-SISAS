@@ -1,3 +1,4 @@
+import os
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
@@ -14,5 +15,7 @@ class UserProfile(models.Model):
 
 @receiver(post_save, sender=User)
 def ensure_user_profile(sender, instance, created, **kwargs):
+    if os.getenv("DISABLE_PROFILE_SIGNAL") == "1":
+        return
     if created:
         UserProfile.objects.create(user=instance)

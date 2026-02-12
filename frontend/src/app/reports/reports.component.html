@@ -12,6 +12,7 @@
       Municipio
       <select [(ngModel)]="selectedMunicipalityId">
         <option [ngValue]="null">Selecciona un municipio</option>
+        <option [ngValue]="'all'">Todos los municipios</option>
         <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
           {{ municipality.name }}
         </option>
@@ -32,7 +33,7 @@
   <div class="report-card" *ngIf="report && !isLoading">
     <header>
       <h3>Reporte mensual</h3>
-      <span>Total movimientos: {{ report.total_ingresos + report.total_pedidos }}</span>
+      <span>Total movimientos: {{ report.total_ingresos + report.total_egresos }}</span>
     </header>
     <table>
       <thead>
@@ -50,11 +51,23 @@
           <td>{{ item.code }}</td>
           <td>{{ item.category }}</td>
           <td>{{ item.material_name }}</td>
-          <td>{{ item.type === 'ingreso' ? 'Ingreso' : 'Pedido' }}</td>
+          <td>{{ item.type === 'ingreso' ? 'Ingreso' : 'Egreso' }}</td>
           <td>{{ item.user }}</td>
           <td>{{ item.quantity }}</td>
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showAllFormatsModal">
+    <div class="modal-card">
+      <h3>Reporte consolidado</h3>
+      <p>Selecciona el formato para descargar el reporte de todos los municipios.</p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="closeAllFormatsModal()">Cancelar</button>
+        <button type="button" (click)="downloadAllMunicipalities('pdf')">PDF</button>
+        <button type="button" (click)="downloadAllMunicipalities('excel')">EXCEL</button>
+      </div>
+    </div>
   </div>
 </section>

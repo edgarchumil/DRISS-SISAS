@@ -17,11 +17,12 @@ import { Municipality } from '../shared/models';
 })
 export class ReportsComponent implements OnInit {
   municipalities: Municipality[] = [];
-  selectedMunicipalityId: number | null = null;
+  selectedMunicipalityId: number | 'all' | null = null;
   selectedMonth = this.getCurrentMonth();
   report: MunicipalityMonthlyReport | null = null;
   isLoading = false;
   errorMessage = '';
+  showAllFormatsModal = false;
 
   private municipalityService = inject(MunicipalityService);
   private reportService = inject(ReportService);
@@ -41,6 +42,11 @@ export class ReportsComponent implements OnInit {
   }
 
   fetchReport() {
+    if (this.selectedMunicipalityId === 'all') {
+      this.report = null;
+      this.showAllFormatsModal = true;
+      return;
+    }
     if (!this.selectedMunicipalityId) {
       this.errorMessage = 'Selecciona un municipio.';
       return;
@@ -61,6 +67,10 @@ export class ReportsComponent implements OnInit {
   }
 
   downloadReport() {
+    if (this.selectedMunicipalityId === 'all') {
+      this.showAllFormatsModal = true;
+      return;
+    }
     if (!this.selectedMunicipalityId) {
       this.errorMessage = 'Selecciona un municipio.';
       return;
@@ -77,6 +87,29 @@ export class ReportsComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'No se pudo descargar el reporte.';
+      },
+    });
+  }
+
+  closeAllFormatsModal() {
+    this.showAllFormatsModal = false;
+  }
+
+  downloadAllMunicipalities(format: 'pdf' | 'excel') {
+    this.errorMessage = '';
+    this.reportService.downloadAllMunicipalitiesMonthly(this.selectedMonth, format).subscribe({
+      next: (blob) => {
+        const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `reporte_todos_municipios_${this.selectedMonth}.${ext}`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        this.showAllFormatsModal = false;
+      },
+      error: () => {
+        this.errorMessage = 'No se pudo descargar el reporte consolidado.';
       },
     });
   }

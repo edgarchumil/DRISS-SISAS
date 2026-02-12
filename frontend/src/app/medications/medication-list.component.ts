@@ -232,11 +232,14 @@ export class MedicationListComponent implements OnInit {
   }
 
   getStockClass(value: number) {
-    if (value <= 15) {
+    if (value <= 29) {
       return 'stock-low';
     }
-    if (value <= 30) {
-      return 'stock-mid';
+    if (value <= 50) {
+      return 'stock-yellow';
+    }
+    if (value <= 100) {
+      return 'stock-orange';
     }
     return 'stock-high';
   }

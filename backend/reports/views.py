@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import MedicationAccessPermission
-from medications.models import Municipality, Movement
+from medications.models import Medication, Municipality, Movement, MunicipalityStock
 
 MONTHS_ES = [
     "Enero",
@@ -81,7 +81,7 @@ class MunicipalityMonthlyReportView(APIView):
         items = []
         total_quantity = 0
         total_ingresos = 0
-        total_pedidos = 0
+        total_egresos = 0
         for movement in movements:
             user_name = (
                 movement.user.get_full_name() or movement.user.username
@@ -102,7 +102,7 @@ class MunicipalityMonthlyReportView(APIView):
             if movement.type == "ingreso":
                 total_ingresos += 1
             else:
-                total_pedidos += 1
+                total_egresos += 1
 
         return Response(
             {
@@ -112,7 +112,7 @@ class MunicipalityMonthlyReportView(APIView):
                 "month": month_value,
                 "total_quantity": total_quantity,
                 "total_ingresos": total_ingresos,
-                "total_pedidos": total_pedidos,
+                "total_egresos": total_egresos,
                 "items": items,
             }
         )
@@ -128,6 +128,11 @@ class MunicipalityMonthlyReportDownloadView(APIView):
 
         if not municipality_id:
             return Response({"detail": "municipality_id es requerido."}, status=400)
+
+        if str(municipality_id).lower() == "all":
+            # Compatibilidad: permite descargar consolidado usando el endpoint
+            # base /download/ con municipality_id=all.
+            return AllMunicipalitiesMonthlyReportDownloadView().get(request)
 
         if not year_value or not month_value:
             year_value, month_value = parse_month(None)
@@ -165,10 +170,10 @@ class MunicipalityMonthlyReportDownloadView(APIView):
 
         total_movements = movements.count()
         total_ingresos = sum(1 for item in movements if item.type == "ingreso")
-        total_pedidos = sum(1 for item in movements if item.type == "egreso")
+        total_egresos = sum(1 for item in movements if item.type == "egreso")
 
         summary_data = [
-            ["", f"Total de movimientos: {total_movements}", "", f"Ingresos: {total_ingresos}", "", f"Pedidos: {total_pedidos}"],
+            ["", f"Total de movimientos: {total_movements}", "", f"Ingresos: {total_ingresos}", "", f"Egresos: {total_egresos}"],
         ]
         summary_table = Table(summary_data, hAlign="CENTER", colWidths=[14, 170, 14, 120, 10, 100])
         summary_table.setStyle(
@@ -209,7 +214,7 @@ class MunicipalityMonthlyReportDownloadView(APIView):
                     item.medication.code,
                     item.medication.category,
                     item.medication.material_name,
-                    "Ingreso" if item.type == "ingreso" else "Pedido",
+                    "Ingreso" if item.type == "ingreso" else "Egreso",
                     user_name,
                     str(item.quantity),
                 ]
@@ -284,7 +289,7 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             # Summary pills
             total_movements = movements.count()
             total_ingresos = sum(1 for item in movements if item.type == "ingreso")
-            total_pedidos = sum(1 for item in movements if item.type == "egreso")
+            total_egresos = sum(1 for item in movements if item.type == "egreso")
             canvas_obj.setFillColor(colors.HexColor("#eef3fb"))
             # summary moved below table
 
@@ -304,3 +309,412 @@ class MunicipalityMonthlyReportDownloadView(APIView):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
+
+class AllMunicipalitiesMonthlyReportDownloadView(APIView):
+    permission_classes = [IsAuthenticated, MedicationAccessPermission]
+
+    def get(self, request):
+        month = request.query_params.get("month")
+        export_format = (request.query_params.get("export_format") or "pdf").lower()
+        year_value, month_value = parse_month(month)
+        if not year_value or not month_value:
+            year_value, month_value = parse_month(None)
+
+        movements = (
+            Movement.objects.filter(
+                created_at__year=year_value,
+                created_at__month=month_value,
+            )
+            .select_related("medication", "user", "municipality")
+            .order_by("municipality__name", "created_at", "id")
+        )
+
+        rows = []
+        for index, movement in enumerate(movements, start=1):
+            user_name = movement.user.get_full_name() or movement.user.username if movement.user else "-"
+            rows.append(
+                [
+                    index,
+                    movement.municipality.name if movement.municipality else "-",
+                    movement.medication.code,
+                    movement.medication.category,
+                    movement.medication.material_name,
+                    "Ingreso" if movement.type == "ingreso" else "Egreso",
+                    user_name,
+                    movement.quantity,
+                ]
+            )
+
+        if export_format == "excel":
+            return self._build_excel(rows, year_value, month_value)
+        return self._build_pdf(movements, year_value, month_value, request)
+
+    def _build_excel(self, rows, year_value: int, month_value: int):
+        try:
+            from io import BytesIO
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Font, PatternFill
+        except Exception:
+            return Response(
+                {"detail": "Instala openpyxl para generar EXCEL (pip install openpyxl)."},
+                status=500,
+            )
+
+        from django.db.models import Sum
+
+        wb = Workbook()
+
+        header_fill = PatternFill(start_color="1F4F9C", end_color="1F4F9C", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        def style_header(sheet, row_index: int):
+            for cell in sheet[row_index]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+
+        # Detail data maps
+        month_label = format_period(year_value, month_value)
+        movements = Movement.objects.filter(
+            created_at__year=year_value,
+            created_at__month=month_value,
+            municipality__isnull=False,
+        ).select_related("municipality", "medication")
+
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        egresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="egreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        stock_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in MunicipalityStock.objects.values("municipality__id", "municipality__name")
+            .annotate(total=Sum("stock"))
+        }
+
+        # Sheet 1: General summary
+        ws = wb.active
+        ws.title = "Detalle general"
+        ws.append(["DIRECCION DE AREA DE SALUD DE SOLOLÁ"])
+        ws.append(["REPORTE MENSUAL DE INSUMOS / MATERIALES"])
+        ws.append([f"Periodo: {month_label}"])
+        ws.append([f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"])
+        ws.append([])
+        ws.append(["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"])
+        style_header(ws, 6)
+
+        from django.db.models import Sum, Case, When, IntegerField
+
+        movements_summary = movements.values("municipality_id", "medication_id").annotate(
+            ingresos=Sum(Case(When(type="ingreso", then="quantity"), default=0, output_field=IntegerField())),
+            egresos=Sum(Case(When(type="egreso", then="quantity"), default=0, output_field=IntegerField())),
+        )
+        movement_map = {
+            (row["municipality_id"], row["medication_id"]): (row["ingresos"] or 0, row["egresos"] or 0)
+            for row in movements_summary
+        }
+        stock_map = {
+            (row["municipality_id"], row["medication_id"]): row["total"] or 0
+            for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
+            .annotate(total=Sum("stock"))
+        }
+
+        keys = set(movement_map.keys()) | set(stock_map.keys())
+        municipality_ids = {k[0] for k in keys if k[0] is not None}
+        medication_ids = {k[1] for k in keys if k[1] is not None}
+        municipalities = {
+            m.id: m.name for m in Municipality.objects.filter(id__in=municipality_ids)
+        }
+        medications = {
+            m.id: m.material_name for m in Medication.objects.filter(id__in=medication_ids)
+        }
+
+        def sort_key(item):
+            mid, medid = item
+            return (municipalities.get(mid, ""), medications.get(medid, ""))
+
+        for index, (municipality_id, medication_id) in enumerate(sorted(keys, key=sort_key), start=1):
+            mun_name = municipalities.get(municipality_id, "-")
+            med_name = medications.get(medication_id, "-")
+            ingresos_total, egresos_total = movement_map.get((municipality_id, medication_id), (0, 0))
+            stock_total = stock_map.get((municipality_id, medication_id), 0)
+            ws.append([index, mun_name, med_name, ingresos_total, egresos_total, stock_total])
+
+        ws.column_dimensions["A"].width = 6
+        ws.column_dimensions["B"].width = 28
+        ws.column_dimensions["C"].width = 40
+        ws.column_dimensions["D"].width = 16
+        ws.column_dimensions["E"].width = 20
+        ws.column_dimensions["F"].width = 16
+
+        # One sheet per municipality with summary
+        for municipality_id, municipality_name in sorted(municipalities.items(), key=lambda item: item[1]):
+            # Excel sheet title max length 31 and no invalid chars
+            safe_title = "".join(ch for ch in municipality_name if ch not in '\\/*?:[]')
+            safe_title = safe_title[:31] if safe_title else f"Municipio {municipality_id}"
+            sheet = wb.create_sheet(title=safe_title)
+            sheet.append(["DIRECCION DE AREA DE SALUD DE SOLOLÁ"])
+            sheet.append(["REPORTE MENSUAL DE INSUMOS / MATERIALES"])
+            sheet.append([f"Municipio: {municipality_name}"])
+            sheet.append([f"Periodo: {month_label}"])
+            sheet.append([f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"])
+            sheet.append([])
+            sheet.append(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"])
+            style_header(sheet, 7)
+            municipality_keys = [k for k in keys if k[0] == municipality_id]
+            for med_id in sorted(municipality_keys, key=lambda k: medications.get(k[1], "")):
+                med_name = medications.get(med_id[1], "-")
+                ingresos_total, egresos_total = movement_map.get((municipality_id, med_id[1]), (0, 0))
+                stock_total = stock_map.get((municipality_id, med_id[1]), 0)
+                sheet.append([med_name, ingresos_total, egresos_total, stock_total])
+            sheet.column_dimensions["A"].width = 40
+            sheet.column_dimensions["B"].width = 16
+            sheet.column_dimensions["C"].width = 20
+            sheet.column_dimensions["D"].width = 16
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        filename = f"reporte_todos_municipios_{year_value}-{month_value:02d}.xlsx"
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    def _build_pdf(self, movements, year_value: int, month_value: int, request):
+        try:
+            from io import BytesIO
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import letter, landscape
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        except Exception:
+            return Response(
+                {"detail": "Instala reportlab para generar PDF (pip install reportlab)."},
+                status=500,
+            )
+
+        from django.db.models import Sum
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=20, bottomMargin=20, leftMargin=36, rightMargin=36)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        period_label = format_period(year_value, month_value)
+        username = request.user.get_full_name() or request.user.username
+        date_label = timezone.localdate().strftime("%d/%m/%Y")
+
+        total_movements = movements.count()
+        total_ingresos = movements.filter(type="ingreso").count()
+        total_egresos = movements.filter(type="egreso").count()
+
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        ingresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="ingreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        egresos_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in movements.filter(type="egreso")
+            .values("municipality__id", "municipality__name")
+            .annotate(total=Sum("quantity"))
+        }
+        stock_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in MunicipalityStock.objects.values("municipality__id", "municipality__name")
+            .annotate(total=Sum("stock"))
+        }
+
+        # Map of municipality -> list of insumos (material_name) for the month
+        materials_map: dict[tuple[int | None, str | None], list[str]] = {}
+        for row in movements.values(
+            "municipality__id", "municipality__name", "medication__material_name"
+        ).distinct():
+            key = (row["municipality__id"], row["municipality__name"])
+            materials_map.setdefault(key, []).append(row["medication__material_name"])
+
+        def format_materials(key: tuple[int | None, str | None], limit: int = 5) -> str:
+            items = sorted(materials_map.get(key, []))
+            if not items:
+                return "-"
+            if len(items) <= limit:
+                return ", ".join(items)
+            extra = len(items) - limit
+            return f"{', '.join(items[:limit])} (+{extra})"
+
+        from django.db.models import Sum, Case, When, IntegerField
+
+        movements = movements.filter(municipality__isnull=False)
+        movements_summary = movements.values("municipality_id", "medication_id").annotate(
+            ingresos=Sum(Case(When(type="ingreso", then="quantity"), default=0, output_field=IntegerField())),
+            egresos=Sum(Case(When(type="egreso", then="quantity"), default=0, output_field=IntegerField())),
+        )
+        movement_map = {
+            (row["municipality_id"], row["medication_id"]): (row["ingresos"] or 0, row["egresos"] or 0)
+            for row in movements_summary
+        }
+        stock_map = {
+            (row["municipality_id"], row["medication_id"]): row["total"] or 0
+            for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
+            .annotate(total=Sum("stock"))
+        }
+        keys = set(movement_map.keys()) | set(stock_map.keys())
+        municipality_ids = {k[0] for k in keys if k[0] is not None}
+        medication_ids = {k[1] for k in keys if k[1] is not None}
+        municipalities = {m.id: m.name for m in Municipality.objects.filter(id__in=municipality_ids)}
+        medications = {m.id: m.material_name for m in Medication.objects.filter(id__in=medication_ids)}
+
+        def sort_key(item):
+            mid, medid = item
+            return (municipalities.get(mid, ""), medications.get(medid, ""))
+
+        data = [["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]]
+        for index, (municipality_id, medication_id) in enumerate(sorted(keys, key=sort_key), start=1):
+            mun_name = municipalities.get(municipality_id, "-")
+            med_name = medications.get(medication_id, "-")
+            ingresos_total, egresos_total = movement_map.get((municipality_id, medication_id), (0, 0))
+            stock_total = stock_map.get((municipality_id, medication_id), 0)
+            data.append(
+                [
+                    str(index),
+                    mun_name,
+                    med_name,
+                    str(ingresos_total),
+                    str(egresos_total),
+                    str(stock_total),
+                ]
+            )
+
+        table = Table(data, hAlign="CENTER", colWidths=[30, 160, 240, 70, 90, 90])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f4f9c")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cfd8e6")),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fb")]),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                    ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                    ("ALIGN", (3, 0), (5, -1), "RIGHT"),
+                ]
+            )
+        )
+        elements.append(table)
+
+        def draw_header(canvas_obj, doc_obj):
+            canvas_obj.saveState()
+            width, height = landscape(letter)
+
+            # Top light bar
+            canvas_obj.setFillColor(colors.HexColor("#dcecff"))
+            canvas_obj.rect(0, height - 30, width, 30, fill=1, stroke=0)
+            canvas_obj.setFont("Helvetica-Bold", 10)
+            canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
+            canvas_obj.drawCentredString(width / 2, height - 20, "DIRECCION DE AREA DE SALUD DE SOLOLÁ")
+
+            # Main title bar
+            canvas_obj.setFillColor(colors.HexColor("#1f4f9c"))
+            canvas_obj.rect(0, height - 95, width, 55, fill=1, stroke=0)
+            canvas_obj.setFillColor(colors.white)
+            canvas_obj.setFont("Helvetica-Bold", 14)
+            canvas_obj.drawCentredString(width / 2, height - 60, "REPORTE MENSUAL DE")
+            canvas_obj.drawCentredString(width / 2, height - 78, "INSUMOS / MATERIALES")
+
+            # Info box
+            canvas_obj.setFillColor(colors.HexColor("#eef3fb"))
+            info_top = height - 115
+            info_box_width = width - 120
+            info_box_x = (width - info_box_width) / 2
+            canvas_obj.roundRect(info_box_x, info_top - 45, info_box_width, 45, 8, fill=1, stroke=0)
+            canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
+            canvas_obj.setFont("Helvetica-Bold", 9)
+            left_x = info_box_x + 20
+            right_x = info_box_x + info_box_width / 2 + 20
+            canvas_obj.drawString(left_x, info_top - 20, "Municipio: Todos los municipios")
+            canvas_obj.drawString(left_x, info_top - 35, f"Periodo: {period_label}")
+            canvas_obj.drawString(right_x, info_top - 20, f"Fecha: {date_label}")
+            canvas_obj.drawString(right_x, info_top - 35, f"Usuario: {username}")
+
+            # Summary pills
+            pill_top = info_top - 58
+            pill_height = 18
+            pill_widths = [180, 120, 120]
+            pill_labels = [
+                f"Total de movimientos: {total_movements}",
+                f"Ingresos: {total_ingresos}",
+                f"Egresos: {total_egresos}",
+            ]
+            total_pills_width = sum(pill_widths) + (len(pill_widths) - 1) * 14
+            x = (width - total_pills_width) / 2
+            for label, w in zip(pill_labels, pill_widths):
+                canvas_obj.setFillColor(colors.HexColor("#eef3fb"))
+                canvas_obj.roundRect(x, pill_top - pill_height, w, pill_height, 6, fill=1, stroke=0)
+                canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
+                canvas_obj.setFont("Helvetica-Bold", 8)
+                canvas_obj.drawCentredString(x + w / 2, pill_top - 12, label)
+                x += w + 14
+
+            canvas_obj.restoreState()
+
+        # Leave space for header block
+        elements.insert(0, Spacer(1, 175))
+
+        doc.build(elements, onFirstPage=draw_header)
+        pdf = buffer.getvalue()
+        buffer.close()
+
+        filename = f"reporte_todos_municipios_{year_value}-{month_value:02d}.pdf"
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response

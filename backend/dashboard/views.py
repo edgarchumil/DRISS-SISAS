@@ -42,7 +42,7 @@ class DashboardStatsView(APIView):
             ).aggregate(total=Sum("quantity")).get("total")
             or 0
         )
-        monthly_pedido = (
+        monthly_egreso = (
             movement_qs.filter(
                 type="egreso", created_at__year=now.year, created_at__month=now.month
             ).aggregate(total=Sum("quantity")).get("total")
@@ -51,9 +51,9 @@ class DashboardStatsView(APIView):
 
         return Response(
             {
-                "consumption_monthly": float(monthly_ingreso + monthly_pedido),
+                "consumption_monthly": float(monthly_ingreso + monthly_egreso),
                 "monthly_ingreso": float(monthly_ingreso),
-                "monthly_pedido": float(monthly_pedido),
+                "monthly_egreso": float(monthly_egreso),
                 "materials_total": materials_total,
                 "users_total": users_total,
                 "users_active": users_active,

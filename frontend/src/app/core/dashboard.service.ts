@@ -6,7 +6,7 @@ import { API_BASE_URL } from './api.config';
 export interface DashboardStats {
   consumption_monthly: number;
   monthly_ingreso: number;
-  monthly_pedido: number;
+  monthly_egreso: number;
   materials_total: number;
   users_total: number;
   users_active: number;

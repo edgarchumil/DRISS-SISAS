@@ -21,7 +21,7 @@ services:
       DB_PASS: sisas_pass
       DB_HOST: db
       DB_PORT: "5432"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,sisas_backend"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,sisas_backend,192.168.0.101,192.168.137.1"
       DEBUG: "1"
     volumes:
       - ./backend:/app
@@ -31,7 +31,7 @@ services:
       - db
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8001"
+             python manage.py runserver 0.0.0.0:8000"
 
   frontend:
     build: ./frontend
