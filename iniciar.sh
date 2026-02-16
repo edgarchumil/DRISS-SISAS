@@ -2,18 +2,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_PY="$ROOT_DIR/.venv/bin/python"
-VENV_PIP="$ROOT_DIR/.venv/bin/pip"
+BACKEND_DIR="$ROOT_DIR/backend"
+VENV_DIR="$BACKEND_DIR/.venv"
+VENV_PY="$VENV_DIR/bin/python"
+VENV_PIP="$VENV_DIR/bin/pip"
 
 cd "$ROOT_DIR"
 
-if [ ! -d ".venv" ]; then
+if [ ! -d "$VENV_DIR" ]; then
   echo "[init] Creando entorno virtual..."
-  python3 -m venv .venv
+  python3 -m venv "$VENV_DIR"
 fi
 
 if [ ! -x "$VENV_PY" ] || [ ! -x "$VENV_PIP" ]; then
-  echo "[error] No se encontró Python dentro de .venv"
+  echo "[error] No se encontró Python dentro de $VENV_DIR"
   exit 1
 fi
 
