@@ -16,6 +16,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isLogoutRequest = req.url.includes('/auth/logout/');
   const isApiRequest = req.url.includes('/api/');
 
+  // Never block login requests with stale local tokens.
+  if (isAuthRequest && !isRefreshRequest) {
+    if (token && authService.isAccessTokenExpired() && !authService.hasValidRefreshToken()) {
+      authService.endSession();
+    }
+    return next(req).pipe(
+      catchError((error: HttpErrorResponse) => throwError(() => error))
+    );
+  }
+
   const goToLogin = () => {
     authService.endSession();
     if (!router.url.startsWith('/login')) {
@@ -61,7 +71,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }
     return next(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status !== 401) {
+        if (isAuthRequest || error.status !== 401) {
           return throwError(() => error);
         }
 
@@ -105,7 +115,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (isRefreshRequest || error.status !== 401) {
+      if (isAuthRequest || isRefreshRequest || error.status !== 401) {
         return throwError(() => error);
       }
       if (!authService.hasValidRefreshToken()) {

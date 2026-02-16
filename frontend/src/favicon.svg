@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="dropGradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#39b6ff" />
+      <stop offset="1" stop-color="#0a61d0" />
+    </linearGradient>
+  </defs>
+  <path
+    d="M32 4C32 4 12 24 12 38a20 20 0 1 0 40 0C52 24 32 4 32 4z"
+    fill="url(#dropGradient)"
+  />
+  <path
+    d="M24 38c0-5 3-9 8-14"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-width="4"
+    opacity="0.9"
+  />
+</svg>

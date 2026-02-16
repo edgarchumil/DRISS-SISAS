@@ -52,19 +52,28 @@ export class LoginComponent {
     if (this.form.invalid || this.isSubmitting) {
       return;
     }
+    // Reset stale tokens/session before every new login attempt.
+    this.authService.endSession();
     this.errorMessage = '';
     this.isSubmitting = true;
     const { username, password } = this.form.getRawValue();
 
     this.authService.login(username ?? '', password ?? '').subscribe({
       next: () => {
-        this.isSubmitting = false;
         this.currentPhrase = this.pickRandomPhrase();
         this.router.navigate(['/dashboard']);
       },
-      error: () => {
+      error: (error) => {
         this.isSubmitting = false;
-        this.errorMessage = 'Credenciales invalidas.';
+        const detail = error?.error?.detail;
+        if (detail === 'No active account found with the given credentials') {
+          this.errorMessage = 'Usuario o contrasena incorrectos.';
+          return;
+        }
+        this.errorMessage = typeof detail === 'string' ? detail : 'Usuario o contrasena incorrectos.';
+      },
+      complete: () => {
+        this.isSubmitting = false;
       },
     });
   }
