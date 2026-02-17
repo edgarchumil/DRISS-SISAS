@@ -346,14 +346,15 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             )
 
         if export_format == "excel":
-            return self._build_excel(rows, year_value, month_value)
+            return self._build_excel(rows, year_value, month_value, request)
         return self._build_pdf(movements, year_value, month_value, request)
 
-    def _build_excel(self, rows, year_value: int, month_value: int):
+    def _build_excel(self, rows, year_value: int, month_value: int, request):
         try:
             from io import BytesIO
             from openpyxl import Workbook
             from openpyxl.styles import Alignment, Font, PatternFill
+            from openpyxl.utils import get_column_letter
         except Exception:
             return Response(
                 {"detail": "Instala openpyxl para generar EXCEL (pip install openpyxl)."},
@@ -367,15 +368,39 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         header_fill = PatternFill(start_color="1F4F9C", end_color="1F4F9C", fill_type="solid")
         header_font = Font(color="FFFFFF", bold=True)
         header_alignment = Alignment(horizontal="center", vertical="center")
+        centered_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        title_font = Font(bold=True)
 
-        def style_header(sheet, row_index: int):
-            for cell in sheet[row_index]:
+        def style_header(sheet, row_index: int, col_letters: list[str]):
+            for col in col_letters:
+                cell = sheet[f"{col}{row_index}"]
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = header_alignment
 
+        def apply_table_format(sheet, header_row: int, col_letters: list[str]):
+            last_row = sheet.max_row
+            min_col = ord(col_letters[0]) - ord("A") + 1
+            max_col = ord(col_letters[-1]) - ord("A") + 1
+            for row in sheet.iter_rows(min_row=header_row + 1, max_row=last_row, min_col=min_col, max_col=max_col):
+                for cell in row:
+                    cell.alignment = centered_alignment
+
+            for col in col_letters:
+                sheet[f"{col}{header_row}"].alignment = header_alignment
+
+            sheet.row_dimensions[header_row].height = 22
+            for row_idx in range(header_row + 1, last_row + 1):
+                sheet.row_dimensions[row_idx].height = 20
+
+            sheet.auto_filter.ref = f"{col_letters[0]}{header_row}:{col_letters[-1]}{last_row}"
+            sheet.freeze_panes = f"{col_letters[0]}{header_row + 1}"
+            sheet.print_options.horizontalCentered = True
+
         # Detail data maps
         month_label = format_period(year_value, month_value)
+        downloaded_by = request.user.get_full_name() or request.user.username
+        footer_label = f"Descargado por: {downloaded_by} | Generado por: SISAS"
         movements = Movement.objects.filter(
             created_at__year=year_value,
             created_at__month=month_value,
@@ -431,15 +456,41 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         }
 
         # Sheet 1: General summary
+        start_col_idx = 3  # C
+        start_col = get_column_letter(start_col_idx)
+        general_cols = [get_column_letter(start_col_idx + i) for i in range(6)]  # C:H
+        title_row_1 = 5
+        title_row_2 = 6
+        period_row = 7
+        date_row = 8
+        meta_row = 9
+        table_header_row = 10
+
         ws = wb.active
         ws.title = "Detalle general"
-        ws.append(["DIRECCION DE AREA DE SALUD DE SOLOLÁ"])
-        ws.append(["REPORTE MENSUAL DE INSUMOS / MATERIALES"])
-        ws.append([f"Periodo: {month_label}"])
-        ws.append([f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"])
-        ws.append([])
-        ws.append(["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"])
-        style_header(ws, 6)
+        ws.merge_cells(f"{general_cols[0]}{title_row_1}:{general_cols[-1]}{title_row_1}")
+        ws.merge_cells(f"{general_cols[0]}{title_row_2}:{general_cols[-1]}{title_row_2}")
+        ws.merge_cells(f"{general_cols[0]}{period_row}:{general_cols[-1]}{period_row}")
+        ws.merge_cells(f"{general_cols[0]}{date_row}:{general_cols[-1]}{date_row}")
+        ws.merge_cells(f"{general_cols[0]}{meta_row}:{general_cols[-1]}{meta_row}")
+
+        ws[f"{general_cols[0]}{title_row_1}"] = "DIRECCION DE AREA DE SALUD DE SOLOLÁ"
+        ws[f"{general_cols[0]}{title_row_2}"] = "REPORTE MENSUAL DE INSUMOS / MATERIALES"
+        ws[f"{general_cols[0]}{period_row}"] = f"Periodo: {month_label}"
+        ws[f"{general_cols[0]}{date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
+        ws[f"{general_cols[0]}{meta_row}"] = footer_label
+
+        ws[f"{general_cols[0]}{title_row_1}"].font = title_font
+        ws[f"{general_cols[0]}{title_row_2}"].font = title_font
+        ws[f"{general_cols[0]}{title_row_1}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{title_row_2}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{period_row}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{date_row}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{meta_row}"].alignment = centered_alignment
+
+        for col_idx, value in enumerate(["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
+            ws.cell(row=table_header_row, column=start_col_idx + col_idx, value=value)
+        style_header(ws, table_header_row, general_cols)
 
         from django.db.models import Sum, Case, When, IntegerField
 
@@ -476,14 +527,18 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             med_name = medications.get(medication_id, "-")
             ingresos_total, egresos_total = movement_map.get((municipality_id, medication_id), (0, 0))
             stock_total = stock_map.get((municipality_id, medication_id), 0)
-            ws.append([index, mun_name, med_name, ingresos_total, egresos_total, stock_total])
+            row_idx = ws.max_row + 1
+            values = [index, mun_name, med_name, ingresos_total, egresos_total, stock_total]
+            for col_idx, value in enumerate(values):
+                ws.cell(row=row_idx, column=start_col_idx + col_idx, value=value)
 
-        ws.column_dimensions["A"].width = 6
-        ws.column_dimensions["B"].width = 28
-        ws.column_dimensions["C"].width = 40
-        ws.column_dimensions["D"].width = 16
-        ws.column_dimensions["E"].width = 20
-        ws.column_dimensions["F"].width = 16
+        ws.column_dimensions["C"].width = 7
+        ws.column_dimensions["D"].width = 24
+        ws.column_dimensions["E"].width = 34
+        ws.column_dimensions["F"].width = 12
+        ws.column_dimensions["G"].width = 16
+        ws.column_dimensions["H"].width = 12
+        apply_table_format(ws, table_header_row, general_cols)
 
         # One sheet per municipality with summary
         for municipality_id, municipality_name in sorted(municipalities.items(), key=lambda item: item[1]):
@@ -491,24 +546,56 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             safe_title = "".join(ch for ch in municipality_name if ch not in '\\/*?:[]')
             safe_title = safe_title[:31] if safe_title else f"Municipio {municipality_id}"
             sheet = wb.create_sheet(title=safe_title)
-            sheet.append(["DIRECCION DE AREA DE SALUD DE SOLOLÁ"])
-            sheet.append(["REPORTE MENSUAL DE INSUMOS / MATERIALES"])
-            sheet.append([f"Municipio: {municipality_name}"])
-            sheet.append([f"Periodo: {month_label}"])
-            sheet.append([f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"])
-            sheet.append([])
-            sheet.append(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"])
-            style_header(sheet, 7)
+            muni_start_col_idx = 3  # C
+            muni_cols = [get_column_letter(muni_start_col_idx + i) for i in range(4)]  # C:F
+            muni_title_row_1 = 5
+            muni_title_row_2 = 6
+            muni_name_row = 7
+            muni_period_row = 8
+            muni_date_row = 9
+            muni_meta_row = 10
+            muni_table_header_row = 11
+
+            sheet.merge_cells(f"{muni_cols[0]}{muni_title_row_1}:{muni_cols[-1]}{muni_title_row_1}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_title_row_2}:{muni_cols[-1]}{muni_title_row_2}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_name_row}:{muni_cols[-1]}{muni_name_row}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_period_row}:{muni_cols[-1]}{muni_period_row}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_date_row}:{muni_cols[-1]}{muni_date_row}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_meta_row}:{muni_cols[-1]}{muni_meta_row}")
+
+            sheet[f"{muni_cols[0]}{muni_title_row_1}"] = "DIRECCION DE AREA DE SALUD DE SOLOLÁ"
+            sheet[f"{muni_cols[0]}{muni_title_row_2}"] = "REPORTE MENSUAL DE INSUMOS / MATERIALES"
+            sheet[f"{muni_cols[0]}{muni_name_row}"] = f"Municipio: {municipality_name}"
+            sheet[f"{muni_cols[0]}{muni_period_row}"] = f"Periodo: {month_label}"
+            sheet[f"{muni_cols[0]}{muni_date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
+            sheet[f"{muni_cols[0]}{muni_meta_row}"] = footer_label
+
+            sheet[f"{muni_cols[0]}{muni_title_row_1}"].font = title_font
+            sheet[f"{muni_cols[0]}{muni_title_row_2}"].font = title_font
+            sheet[f"{muni_cols[0]}{muni_title_row_1}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_title_row_2}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_name_row}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_period_row}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_date_row}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_meta_row}"].alignment = centered_alignment
+
+            for col_idx, value in enumerate(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
+                sheet.cell(row=muni_table_header_row, column=muni_start_col_idx + col_idx, value=value)
+            style_header(sheet, muni_table_header_row, muni_cols)
             municipality_keys = [k for k in keys if k[0] == municipality_id]
             for med_id in sorted(municipality_keys, key=lambda k: medications.get(k[1], "")):
                 med_name = medications.get(med_id[1], "-")
                 ingresos_total, egresos_total = movement_map.get((municipality_id, med_id[1]), (0, 0))
                 stock_total = stock_map.get((municipality_id, med_id[1]), 0)
-                sheet.append([med_name, ingresos_total, egresos_total, stock_total])
-            sheet.column_dimensions["A"].width = 40
-            sheet.column_dimensions["B"].width = 16
-            sheet.column_dimensions["C"].width = 20
-            sheet.column_dimensions["D"].width = 16
+                row_idx = sheet.max_row + 1
+                values = [med_name, ingresos_total, egresos_total, stock_total]
+                for col_idx, value in enumerate(values):
+                    sheet.cell(row=row_idx, column=muni_start_col_idx + col_idx, value=value)
+            sheet.column_dimensions["C"].width = 34
+            sheet.column_dimensions["D"].width = 12
+            sheet.column_dimensions["E"].width = 16
+            sheet.column_dimensions["F"].width = 12
+            apply_table_format(sheet, muni_table_header_row, muni_cols)
 
         buffer = BytesIO()
         wb.save(buffer)

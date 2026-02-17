@@ -61,10 +61,13 @@
   min-height: 34px;
 }
 
-.nav-item .icon {
-  width: 20px;
-  text-align: center;
-  font-size: 1rem;
+.icon-img {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .nav-item:hover {
