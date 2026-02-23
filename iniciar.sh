@@ -11,6 +11,12 @@ BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-4200}"
 ENABLE_TUNNEL="${ENABLE_TUNNEL:-1}"
 TUNNEL_NAME="${TUNNEL_NAME:-driss-sisas}"
+DB_NAME="${DB_NAME:-sisas_db}"
+DB_USER="${DB_USER:-sisas_user}"
+DB_PASS="${DB_PASS:-sisas_pass}"
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-5432}"
+USE_DOCKER_DB="${USE_DOCKER_DB:-1}"
 
 cd "$ROOT_DIR"
 
@@ -22,6 +28,12 @@ fi
 if ! command -v npm >/dev/null 2>&1; then
   echo "[error] npm/node no está instalado."
   exit 1
+fi
+
+if [ "$USE_DOCKER_DB" = "1" ] && ! command -v docker >/dev/null 2>&1; then
+  echo "[warn] docker no está instalado y USE_DOCKER_DB=1."
+  echo "[warn] Se usará PostgreSQL externo/local (equivalente a USE_DOCKER_DB=0)."
+  USE_DOCKER_DB="0"
 fi
 
 if [ "$ENABLE_TUNNEL" = "1" ] && ! command -v cloudflared >/dev/null 2>&1; then
@@ -37,6 +49,34 @@ fi
 if [ ! -x "$VENV_PY" ] || [ ! -x "$VENV_PIP" ]; then
   echo "[error] No se encontró Python dentro de $VENV_DIR"
   exit 1
+fi
+
+export DB_NAME DB_USER DB_PASS DB_HOST DB_PORT
+
+if [ "$USE_DOCKER_DB" = "1" ]; then
+  COMPOSE_CMD=""
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_CMD="docker-compose"
+  else
+    echo "[error] No se encontró docker compose ni docker-compose."
+    exit 1
+  fi
+
+  echo "[init] Iniciando PostgreSQL con Docker Compose..."
+  $COMPOSE_CMD up -d db
+
+  echo "[init] Esperando PostgreSQL en $DB_HOST:$DB_PORT..."
+  ATTEMPTS=0
+  until $COMPOSE_CMD exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; do
+    ATTEMPTS=$((ATTEMPTS + 1))
+    if [ "$ATTEMPTS" -ge 60 ]; then
+      echo "[error] PostgreSQL no estuvo listo a tiempo."
+      exit 1
+    fi
+    sleep 1
+  done
 fi
 
 echo "[init] Instalando dependencias backend..."

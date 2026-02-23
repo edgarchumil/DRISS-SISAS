@@ -41,8 +41,10 @@ services:
   backup:
     image: postgres:16
     container_name: sisas_backup
+    env_file:
+      - .env.prod
     environment:
-      PGPASSWORD: sisas_pass
+      PGPASSWORD: ${DB_PASS}
     volumes:
       - ./backups:/backups
     depends_on:

@@ -1,14 +1,16 @@
 import time
 import unicodedata
+from datetime import datetime, time as dt_time, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models, transaction
 from django.db.utils import OperationalError
+from django.utils import timezone
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
-from django.utils import timezone
 
 from accounts.permissions import MedicationAccessPermission
 from medications.models import Medication, Municipality, MunicipalityStock, Movement
@@ -26,6 +28,127 @@ class MedicationViewSet(viewsets.ModelViewSet):
     permission_classes = [MedicationAccessPermission]
     filter_backends = [filters.SearchFilter]
     search_fields = ["code", "material_name"]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = list(serializer.data)
+            self._inject_two_month_average(data)
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = list(serializer.data)
+        self._inject_two_month_average(data)
+        return Response(data)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        if isinstance(response.data, dict):
+            self._inject_two_month_average([response.data])
+        return response
+
+    def _inject_two_month_average(self, items):
+        if not items:
+            return
+
+        medication_ids = [item["id"] for item in items if item.get("id")]
+        if not medication_ids:
+            return
+
+        current_stock_map = {
+            row["medication_id"]: row["total"] or 0
+            for row in MunicipalityStock.objects.filter(medication_id__in=medication_ids)
+            .values("medication_id")
+            .annotate(total=models.Sum("stock"))
+        }
+
+        now_local = timezone.localtime()
+        current_month_start = now_local.date().replace(day=1)
+        previous_month_end = current_month_start - timedelta(days=1)
+        two_months_back_end = previous_month_end.replace(day=1) - timedelta(days=1)
+
+        tz = timezone.get_current_timezone()
+        cutoff_prev = timezone.make_aware(
+            datetime.combine(previous_month_end, dt_time.max),
+            timezone=tz,
+        )
+        cutoff_two_back = timezone.make_aware(
+            datetime.combine(two_months_back_end, dt_time.max),
+            timezone=tz,
+        )
+
+        movement_rows = (
+            Movement.objects.filter(medication_id__in=medication_ids)
+            .values("medication_id")
+            .annotate(
+                in_after_prev=models.Sum(
+                    "quantity",
+                    filter=models.Q(type="ingreso", created_at__gt=cutoff_prev),
+                ),
+                out_after_prev=models.Sum(
+                    "quantity",
+                    filter=models.Q(type="egreso", created_at__gt=cutoff_prev),
+                ),
+                in_after_two_back=models.Sum(
+                    "quantity",
+                    filter=models.Q(type="ingreso", created_at__gt=cutoff_two_back),
+                ),
+                out_after_two_back=models.Sum(
+                    "quantity",
+                    filter=models.Q(type="egreso", created_at__gt=cutoff_two_back),
+                ),
+            )
+        )
+
+        movement_map = {
+            row["medication_id"]: {
+                "in_after_prev": row["in_after_prev"] or 0,
+                "out_after_prev": row["out_after_prev"] or 0,
+                "in_after_two_back": row["in_after_two_back"] or 0,
+                "out_after_two_back": row["out_after_two_back"] or 0,
+            }
+            for row in movement_rows
+        }
+
+        for item in items:
+            medication_id = item.get("id")
+            if not medication_id:
+                continue
+
+            current_stock = current_stock_map.get(medication_id, 0)
+            movement = movement_map.get(
+                medication_id,
+                {
+                    "in_after_prev": 0,
+                    "out_after_prev": 0,
+                    "in_after_two_back": 0,
+                    "out_after_two_back": 0,
+                },
+            )
+
+            stock_prev_month = current_stock - (
+                movement["in_after_prev"] - movement["out_after_prev"]
+            )
+            stock_two_months_back = current_stock - (
+                movement["in_after_two_back"] - movement["out_after_two_back"]
+            )
+            stock_prev_month = max(0, stock_prev_month)
+            stock_two_months_back = max(0, stock_two_months_back)
+
+            average = (
+                (Decimal(stock_prev_month) + Decimal(stock_two_months_back)) / Decimal("2")
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+
+            monthly_avg = int(average)
+            if monthly_avg > 0:
+                months_available = current_stock // monthly_avg
+            else:
+                months_available = 0
+
+            item["monthly_demand_avg"] = monthly_avg
+            item["months_of_supply"] = int(months_available)
 
 class MunicipalityViewSet(viewsets.ModelViewSet):
     queryset = Municipality.objects.all().order_by("name")
