@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { AuthService } from '../core/auth.service';
 import { BackupService } from '../core/backup.service';
@@ -53,8 +54,22 @@ export class BackupComponent {
         this.showModal = false;
         this.password = '';
       },
-      error: () => {
-        this.errorMessage = 'Contrasena incorrecta o sin permisos.';
+      error: (err: HttpErrorResponse) => {
+        const fallback = 'Contrasena incorrecta o sin permisos.';
+        if (typeof err?.error === 'string' && err.error.trim()) {
+          this.errorMessage = err.error;
+        } else if (err?.error instanceof Blob) {
+          err.error
+            .text()
+            .then((text) => {
+              this.errorMessage = text?.trim() || fallback;
+            })
+            .catch(() => {
+              this.errorMessage = fallback;
+            });
+        } else {
+          this.errorMessage = fallback;
+        }
         this.isLoading = false;
       },
     });
