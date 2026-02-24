@@ -21,6 +21,8 @@ from medications.serializers import (
     MovementSerializer,
 )
 
+GLOBAL_MUNICIPALITY_NAME = "DMS Y DRISS Local"
+
 
 class MedicationViewSet(viewsets.ModelViewSet):
     queryset = Medication.objects.all().order_by("material_name")
@@ -151,9 +153,18 @@ class MedicationViewSet(viewsets.ModelViewSet):
             item["months_of_supply"] = int(months_available)
 
 class MunicipalityViewSet(viewsets.ModelViewSet):
-    queryset = Municipality.objects.all().order_by("name")
+    queryset = Municipality.objects.all()
     serializer_class = MunicipalitySerializer
     permission_classes = [MedicationAccessPermission]
+
+    def get_queryset(self):
+        return Municipality.objects.annotate(
+            is_global=models.Case(
+                models.When(name__iexact=GLOBAL_MUNICIPALITY_NAME, then=models.Value(0)),
+                default=models.Value(1),
+                output_field=models.IntegerField(),
+            )
+        ).order_by("is_global", "name")
 
     @action(detail=True, methods=["get"])
     def stock(self, request, pk=None):

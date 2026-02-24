@@ -12,7 +12,7 @@
       Municipio
       <select [(ngModel)]="selectedMunicipalityId">
         <option [ngValue]="null">Selecciona un municipio</option>
-        <option [ngValue]="'all'">Todos los municipios</option>
+        <option [ngValue]="'all'">DMS Y DRISS Local</option>
         <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
           {{ municipality.name }}
         </option>

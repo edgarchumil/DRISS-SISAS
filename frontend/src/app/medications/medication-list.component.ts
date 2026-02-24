@@ -164,7 +164,7 @@ export class MedicationListComponent implements OnInit {
       }
       this.isAllMunicipalities = true;
       this.selectedMunicipalityId = null;
-      this.selectedMunicipalityName = 'Todos los municipios';
+      this.selectedMunicipalityName = 'DMS Y DRISS Local';
       this.municipalityError = '';
       this.stockSaveError = '';
       this.setPhysicalStockDisabled(true);

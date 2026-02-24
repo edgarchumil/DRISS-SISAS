@@ -768,7 +768,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             canvas_obj.setFont("Helvetica-Bold", 9)
             left_x = info_box_x + 20
             right_x = info_box_x + info_box_width / 2 + 20
-            canvas_obj.drawString(left_x, info_top - 20, "Municipio: Todos los municipios")
+            canvas_obj.drawString(left_x, info_top - 20, "Municipio: DMS Y DRISS Local")
             canvas_obj.drawString(left_x, info_top - 35, f"Periodo: {period_label}")
             canvas_obj.drawString(right_x, info_top - 20, f"Fecha: {date_label}")
             canvas_obj.drawString(right_x, info_top - 35, f"Usuario: {username}")
