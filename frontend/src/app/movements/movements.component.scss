@@ -117,13 +117,18 @@ td {
 
 .modal-card,
 .confirm-card {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   background: #fff;
   border-radius: 18px;
   padding: 2rem;
   box-shadow: 0 25px 60px rgba(10, 61, 145, 0.2);
   display: grid;
   gap: 1.2rem;
+}
+
+.modal-card {
+  max-height: calc(100vh - 3rem);
+  overflow: hidden;
 }
 
 .modal-header-row {
@@ -149,6 +154,9 @@ td {
 .modal-card form {
   display: grid;
   gap: 0.9rem;
+  max-height: calc(100vh - 12rem);
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .modal-card label {
@@ -259,6 +267,12 @@ td {
   display: flex;
   justify-content: flex-end;
   gap: 0.8rem;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding-top: 0.75rem;
+  margin-top: 0.4rem;
+  z-index: 2;
 }
 
 .pagination {
@@ -308,4 +322,37 @@ td {
 
 .modal-actions .danger {
   background: #b42318;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal-card,
+  .confirm-card {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .modal-card {
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal-card form {
+    max-height: calc(100vh - 9rem);
+  }
+
+  .ingreso-row {
+    grid-template-columns: 1fr 96px;
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .modal-actions button {
+    flex: 1 1 140px;
+  }
 }

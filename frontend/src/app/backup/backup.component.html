@@ -27,7 +27,20 @@
       </header>
       <label>
         Contrasena
-        <input type="password" [(ngModel)]="password" />
+        <div class="password-field">
+          <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password" />
+          <button
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="showPassword ? 'Ocultar contrasena' : 'Ver contrasena'"
+            (click)="togglePasswordVisibility()"
+          >
+            <img
+              [src]="showPassword ? '/assets/password-lock.svg' : '/assets/password-unlock.svg'"
+              [alt]="showPassword ? 'Bloquear contrasena' : 'Ver contrasena'"
+            />
+          </button>
+        </div>
       </label>
       <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
       <div class="modal-actions">

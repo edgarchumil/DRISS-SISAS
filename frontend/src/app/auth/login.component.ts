@@ -15,6 +15,7 @@ import { AuthService } from '../core/auth.service';
 export class LoginComponent {
   errorMessage = '';
   isSubmitting = false;
+  showPassword = false;
 
   phrases = [
     '"Ser salubrista es proteger la vida incluso antes de que el riesgo exista"',
@@ -76,6 +77,10 @@ export class LoginComponent {
         this.isSubmitting = false;
       },
     });
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
   }
 
   private pickRandomPhrase() {

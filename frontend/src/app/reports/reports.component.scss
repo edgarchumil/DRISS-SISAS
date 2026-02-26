@@ -112,6 +112,31 @@ td {
   font-weight: 600;
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-weight: 600;
+  color: var(--sisas-muted);
+}
+
+.page-btn {
+  border: 1px solid var(--sisas-blue-700);
+  background: #fff;
+  color: var(--sisas-blue-700);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -119,15 +144,20 @@ td {
   display: grid;
   place-items: center;
   z-index: 2000;
+  padding: 2rem;
 }
 
 .modal-card {
-  width: min(520px, calc(100vw - 2rem));
+  width: min(760px, 100%);
   background: var(--sisas-card);
   border: 1px solid var(--sisas-border);
-  border-radius: 16px;
-  padding: 1.2rem 1.4rem;
+  border-radius: 18px;
+  padding: 2rem;
   box-shadow: 0 18px 40px rgba(10, 61, 145, 0.2);
+  display: grid;
+  gap: 1rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
 }
 
 .modal-card h3 {
@@ -139,10 +169,54 @@ td {
   color: var(--sisas-muted);
 }
 
+.scope-options {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.scope-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.medications-picker {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.picker-title {
+  font-weight: 600;
+}
+
+.picker-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--sisas-border);
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #fff;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
+  gap: 0.8rem;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding-top: 0.75rem;
+  margin-top: 0.4rem;
+  z-index: 2;
 }
 
 .modal-actions button {
@@ -158,4 +232,25 @@ td {
 .modal-actions .secondary {
   background: var(--sisas-blue-200);
   color: var(--sisas-blue-900);
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal-card {
+    padding: 1rem;
+    border-radius: 14px;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .modal-actions button {
+    flex: 1 1 140px;
+  }
 }

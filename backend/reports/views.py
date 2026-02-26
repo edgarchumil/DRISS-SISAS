@@ -42,6 +42,23 @@ def format_period(year_value: int, month_value: int) -> str:
     return f"{month_name} {year_value}"
 
 
+def parse_medication_ids(value: str | None):
+    if not value:
+        return []
+    ids: list[int] = []
+    for chunk in str(value).split(","):
+        part = chunk.strip()
+        if not part:
+            continue
+        if not part.isdigit():
+            raise ValueError("medication_ids debe ser una lista de enteros separada por coma.")
+        number = int(part)
+        if number <= 0:
+            raise ValueError("medication_ids debe contener solo enteros positivos.")
+        ids.append(number)
+    return sorted(set(ids))
+
+
 class MunicipalityMonthlyReportView(APIView):
     permission_classes = [IsAuthenticated, MedicationAccessPermission]
 
@@ -96,6 +113,7 @@ class MunicipalityMonthlyReportView(APIView):
                     "quantity": movement.quantity,
                     "type": movement.type,
                     "user": user_name,
+                    "observations": (movement.notes or "").strip() or "-",
                 }
             )
             total_quantity += movement.quantity
@@ -316,9 +334,15 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
     def get(self, request):
         month = request.query_params.get("month")
         export_format = (request.query_params.get("export_format") or "pdf").lower()
+        medication_ids_param = request.query_params.get("medication_ids")
         year_value, month_value = parse_month(month)
         if not year_value or not month_value:
             year_value, month_value = parse_month(None)
+
+        try:
+            medication_ids = parse_medication_ids(medication_ids_param)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=400)
 
         movements = (
             Movement.objects.filter(
@@ -328,6 +352,8 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             .select_related("medication", "user", "municipality")
             .order_by("municipality__name", "created_at", "id")
         )
+        if medication_ids:
+            movements = movements.filter(medication_id__in=medication_ids)
 
         rows = []
         for index, movement in enumerate(movements, start=1):
@@ -346,10 +372,10 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             )
 
         if export_format == "excel":
-            return self._build_excel(rows, year_value, month_value, request)
-        return self._build_pdf(movements, year_value, month_value, request)
+            return self._build_excel(rows, year_value, month_value, request, medication_ids)
+        return self._build_pdf(movements, year_value, month_value, request, medication_ids)
 
-    def _build_excel(self, rows, year_value: int, month_value: int, request):
+    def _build_excel(self, rows, year_value: int, month_value: int, request, medication_ids=None):
         try:
             from io import BytesIO
             from openpyxl import Workbook
@@ -406,6 +432,8 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             created_at__month=month_value,
             municipality__isnull=False,
         ).select_related("municipality", "medication")
+        if medication_ids:
+            movements = movements.filter(medication_id__in=medication_ids)
 
         ingresos_map = {
             (row["municipality__id"], row["municipality__name"]): row["total"] or 0
@@ -450,6 +478,11 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             .annotate(total=Sum("quantity"))
         }
         stock_map = {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in MunicipalityStock.objects.filter(
+                medication_id__in=medication_ids
+            ).values("municipality__id", "municipality__name").annotate(total=Sum("stock"))
+        } if medication_ids else {
             (row["municipality__id"], row["municipality__name"]): row["total"] or 0
             for row in MunicipalityStock.objects.values("municipality__id", "municipality__name")
             .annotate(total=Sum("stock"))
@@ -503,6 +536,11 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             for row in movements_summary
         }
         stock_map = {
+            (row["municipality_id"], row["medication_id"]): row["total"] or 0
+            for row in MunicipalityStock.objects.filter(
+                medication_id__in=medication_ids
+            ).values("municipality_id", "medication_id").annotate(total=Sum("stock"))
+        } if medication_ids else {
             (row["municipality_id"], row["medication_id"]): row["total"] or 0
             for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
             .annotate(total=Sum("stock"))
@@ -608,7 +646,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
-    def _build_pdf(self, movements, year_value: int, month_value: int, request):
+    def _build_pdf(self, movements, year_value: int, month_value: int, request, medication_ids=None):
         try:
             from io import BytesIO
             from reportlab.lib import colors
@@ -656,6 +694,11 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         }
         stock_map = {
             (row["municipality__id"], row["municipality__name"]): row["total"] or 0
+            for row in MunicipalityStock.objects.filter(
+                medication_id__in=medication_ids
+            ).values("municipality__id", "municipality__name").annotate(total=Sum("stock"))
+        } if medication_ids else {
+            (row["municipality__id"], row["municipality__name"]): row["total"] or 0
             for row in MunicipalityStock.objects.values("municipality__id", "municipality__name")
             .annotate(total=Sum("stock"))
         }
@@ -689,6 +732,11 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             for row in movements_summary
         }
         stock_map = {
+            (row["municipality_id"], row["medication_id"]): row["total"] or 0
+            for row in MunicipalityStock.objects.filter(
+                medication_id__in=medication_ids
+            ).values("municipality_id", "medication_id").annotate(total=Sum("stock"))
+        } if medication_ids else {
             (row["municipality_id"], row["medication_id"]): row["total"] or 0
             for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
             .annotate(total=Sum("stock"))

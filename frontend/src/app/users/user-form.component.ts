@@ -27,6 +27,7 @@ export class UserFormComponent implements OnInit {
   userId?: number;
   roleOptions = ROLE_OPTIONS;
   municipalities: Municipality[] = [];
+  showPassword = false;
 
   private fb = inject(FormBuilder);
   private userService = inject(UserService);
@@ -102,5 +103,12 @@ export class UserFormComponent implements OnInit {
         this.isSaving = false;
       },
     });
+  }
+
+  togglePasswordVisibility() {
+    if (this.isEdit) {
+      return;
+    }
+    this.showPassword = !this.showPassword;
   }
 }

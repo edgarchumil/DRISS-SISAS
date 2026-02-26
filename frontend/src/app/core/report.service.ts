@@ -19,6 +19,7 @@ export interface MunicipalityMonthlyReport {
     quantity: number;
     type: 'ingreso' | 'egreso';
     user: string;
+    observations?: string;
   }>;
 }
 
@@ -41,26 +42,35 @@ export class ReportService {
     });
   }
 
-  downloadAllMunicipalitiesMonthly(month: string, format: 'pdf' | 'excel'): Observable<Blob> {
+  downloadAllMunicipalitiesMonthly(
+    month: string,
+    format: 'pdf' | 'excel',
+    medicationIds?: number[]
+  ): Observable<Blob> {
+    const paramsBase: Record<string, string> = { month, export_format: format };
+    if (medicationIds && medicationIds.length > 0) {
+      paramsBase['medication_ids'] = medicationIds.join(',');
+    }
+
     const candidates: Array<() => Observable<Blob>> = [
       () =>
         this.http.get(`${this.baseUrl}consolidated/download/`, {
-          params: { month, export_format: format },
+          params: paramsBase,
           responseType: 'blob',
         }),
       () =>
         this.http.get(`${this.baseUrl}all/download/`, {
-          params: { month, export_format: format },
+          params: paramsBase,
           responseType: 'blob',
         }),
       () =>
         this.http.get(`${this.baseUrl}download/`, {
-          params: { municipality_id: 'all', month, export_format: format },
+          params: { municipality_id: 'all', ...paramsBase },
           responseType: 'blob',
         }),
       () =>
         this.http.get(`${this.baseUrl}all/`, {
-          params: { month, export_format: format },
+          params: paramsBase,
           responseType: 'blob',
         }),
     ];

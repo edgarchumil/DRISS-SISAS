@@ -28,7 +28,7 @@
           <th>Usuario</th>
           <th>Nombre</th>
           <th>Correo</th>
-          <th>Municipio</th>
+          <th>DMS/RED LOCAL</th>
           <th>Roles</th>
           <th>Opciones</th>
         </tr>
@@ -105,9 +105,9 @@
           </span>
         </label>
         <label>
-          Municipio
+          DMS/RED LOCAL
           <select formControlName="municipality">
-            <option value="">Selecciona un municipio</option>
+            <option value="">Seleccionar RED o DMS</option>
             <option *ngFor="let municipality of municipalities" [value]="municipality.name">
               {{ municipality.name }}
             </option>
@@ -115,13 +115,27 @@
         </label>
         <label>
           Contrasena
-          <input
-            type="password"
-            formControlName="password"
-            [readonly]="isEdit"
-            [class.is-disabled]="isEdit"
-            placeholder="********"
-          />
+          <div class="password-field">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              [readonly]="isEdit"
+              [class.is-disabled]="isEdit"
+              placeholder="********"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPassword ? 'Ocultar contrasena' : 'Ver contrasena'"
+              (click)="togglePasswordVisibility()"
+              [disabled]="isEdit"
+            >
+              <img
+                [src]="showPassword ? '/assets/password-lock.svg' : '/assets/password-unlock.svg'"
+                [alt]="showPassword ? 'Bloquear contrasena' : 'Ver contrasena'"
+              />
+            </button>
+          </div>
           <span class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
             Campo requerido.
           </span>
@@ -167,4 +181,3 @@
     </div>
   </div>
 </section>
-

@@ -98,16 +98,7 @@ export class MedicationListComponent implements OnInit {
     this.municipalityService.list().subscribe({
       next: (response) => {
         this.municipalities = response.results;
-        if (this.userMunicipality) {
-          const match = this.matchMunicipalityByName(this.userMunicipality);
-          if (match) {
-            this.onMunicipalityChange(String(match.id));
-            return;
-          }
-        }
-        if (!this.selectedMunicipalityId && !this.isAllMunicipalities) {
-          this.onMunicipalityChange(this.isAdmin ? 'all' : '');
-        }
+        this.applyInitialMunicipalitySelection();
       },
     });
   }
@@ -117,14 +108,34 @@ export class MedicationListComponent implements OnInit {
       next: (user) => {
         this.userMunicipality = (user.municipality || '').trim();
         this.isAdmin = (user.roles || []).includes('administradores');
-        if (this.userMunicipality && this.municipalities.length) {
-          const match = this.matchMunicipalityByName(this.userMunicipality);
-          if (match) {
-            this.onMunicipalityChange(String(match.id));
-          }
-        }
+        this.applyInitialMunicipalitySelection();
       },
     });
+  }
+
+  private applyInitialMunicipalitySelection() {
+    if (!this.municipalities.length) {
+      return;
+    }
+
+    if (this.isAdmin) {
+      if (!this.isAllMunicipalities || this.selectedMunicipalityId !== null) {
+        this.onMunicipalityChange('all');
+      }
+      return;
+    }
+
+    if (this.userMunicipality) {
+      const match = this.matchMunicipalityByName(this.userMunicipality);
+      if (match) {
+        this.onMunicipalityChange(String(match.id));
+        return;
+      }
+    }
+
+    if (!this.selectedMunicipalityId && !this.isAllMunicipalities) {
+      this.onMunicipalityChange('');
+    }
   }
 
   private normalizeText(value: string) {

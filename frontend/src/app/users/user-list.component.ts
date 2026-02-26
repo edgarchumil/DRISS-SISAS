@@ -34,6 +34,7 @@ export class UserListComponent implements OnInit {
     { value: 'usuarios', label: 'Usuario' },
   ];
   municipalities: Municipality[] = [];
+  showPassword = false;
 
   private fb = inject(FormBuilder);
   private userService = inject(UserService);
@@ -100,6 +101,7 @@ export class UserListComponent implements OnInit {
     this.setPasswordDisabled(false);
     this.isEdit = false;
     this.editingId = undefined;
+    this.showPassword = false;
     this.showModal = true;
   }
 
@@ -117,6 +119,7 @@ export class UserListComponent implements OnInit {
     this.setPasswordDisabled(true);
     this.isEdit = true;
     this.editingId = user.id;
+    this.showPassword = false;
     this.showModal = true;
   }
 
@@ -132,6 +135,14 @@ export class UserListComponent implements OnInit {
 
   closeModal() {
     this.showModal = false;
+    this.showPassword = false;
+  }
+
+  togglePasswordVisibility() {
+    if (this.isEdit) {
+      return;
+    }
+    this.showPassword = !this.showPassword;
   }
 
   submit() {

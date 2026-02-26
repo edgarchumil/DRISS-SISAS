@@ -83,7 +83,7 @@
         <div class="modal-header-row">
           <h3>{{ selectedType === 'ingreso' ? 'Nuevo ingreso' : 'Nuevo egreso' }}</h3>
           <span class="municipality-pill" *ngIf="currentMunicipality">
-            Municipio: {{ currentMunicipality }}
+            DMS/RED LOCAL: {{ currentMunicipality }}
           </span>
         </div>
         <p>Completa el formulario para registrar el movimiento.</p>
@@ -104,15 +104,6 @@
         </ng-container>
 
         <ng-template #egresoFormTemplate>
-          <label>
-            Municipio de despacho
-            <select [formControl]="egresoMunicipalityControl">
-              <option [ngValue]="null">Selecciona un municipio</option>
-              <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
-                {{ municipality.name }}
-              </option>
-            </select>
-          </label>
           <div class="egreso-list">
             <div class="ingreso-row" *ngFor="let med of medications">
               <span>{{ med.material_name }}</span>

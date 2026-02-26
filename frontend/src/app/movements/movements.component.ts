@@ -55,6 +55,7 @@ export class MovementsComponent implements OnInit {
   private router = inject(Router);
 
   currentMunicipality = '';
+  userMunicipalityLocked = false;
   movementError = '';
   lastError = '';
   egresoMunicipalityControl = new FormControl<number | null>(null);
@@ -105,9 +106,11 @@ export class MovementsComponent implements OnInit {
     this.userService.me().subscribe({
       next: (user) => {
         this.currentMunicipality = (user.municipality || '').trim();
+        this.syncUserMunicipalitySelection();
       },
       error: () => {
         this.currentMunicipality = '';
+        this.syncUserMunicipalitySelection();
       },
     });
   }
@@ -116,9 +119,11 @@ export class MovementsComponent implements OnInit {
     this.municipalityService.list().subscribe({
       next: (response) => {
         this.municipalities = response.results;
+        this.syncUserMunicipalitySelection();
       },
       error: () => {
         this.municipalities = [];
+        this.syncUserMunicipalitySelection();
       },
     });
   }
@@ -131,7 +136,7 @@ export class MovementsComponent implements OnInit {
   chooseType(type: MovementType) {
     this.selectedType = type;
     if (type === 'egreso') {
-      this.egresoMunicipalityControl.setValue(null);
+      this.syncUserMunicipalitySelection();
     }
     this.showTypeModal = false;
     this.openFormModal();
@@ -304,8 +309,50 @@ export class MovementsComponent implements OnInit {
         this.showFormModal = false;
         this.egresoForm.reset();
         this.egresoNotes.setValue('');
-        this.egresoMunicipalityControl.setValue(null);
+        this.syncUserMunicipalitySelection();
       });
+  }
+
+  private normalizeText(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private canonicalMunicipalityName(value: string) {
+    return this.normalizeText(value)
+      .replace(/\b(dms|red|driss|local)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private syncUserMunicipalitySelection() {
+    if (!this.currentMunicipality || !this.municipalities.length) {
+      this.userMunicipalityLocked = false;
+      this.egresoMunicipalityControl.enable({ emitEvent: false });
+      return;
+    }
+
+    const target = this.canonicalMunicipalityName(this.currentMunicipality);
+    const match = this.municipalities.find((item) => {
+      const candidate = this.canonicalMunicipalityName(item.name);
+      if (!target || !candidate) {
+        return false;
+      }
+      return candidate === target || candidate.includes(target) || target.includes(candidate);
+    });
+
+    if (match) {
+      this.userMunicipalityLocked = true;
+      this.egresoMunicipalityControl.setValue(match.id, { emitEvent: false });
+      this.egresoMunicipalityControl.disable({ emitEvent: false });
+      return;
+    }
+
+    this.userMunicipalityLocked = false;
+    this.egresoMunicipalityControl.enable({ emitEvent: false });
   }
 
   private downloadDispatchReport(ids: number[]) {

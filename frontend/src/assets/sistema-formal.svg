@@ -1,0 +1,37 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Icono formal de sistema</title>
+  <desc id="desc">Escudo institucional con nodos de red y marca de verificacion</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A3D91"/>
+      <stop offset="1" stop-color="#1F63C2"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="128" y1="112" x2="384" y2="416" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#EAF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="68" y="52" width="376" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#072D6A" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect x="48" y="48" width="416" height="416" rx="92" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <path d="M256 96L372 146V250C372 331 323 384 256 416C189 384 140 331 140 250V146L256 96Z" fill="url(#shield)"/>
+  </g>
+
+  <path d="M256 124L346 163V248C346 314 307 359 256 386C205 359 166 314 166 248V163L256 124Z" stroke="#0A3D91" stroke-width="10" stroke-linejoin="round"/>
+
+  <path d="M198 232H314" stroke="#1F63C2" stroke-width="10" stroke-linecap="round"/>
+  <path d="M256 175V232" stroke="#1F63C2" stroke-width="10" stroke-linecap="round"/>
+  <path d="M214 276H298" stroke="#1F63C2" stroke-width="10" stroke-linecap="round"/>
+
+  <circle cx="198" cy="232" r="14" fill="#1F63C2"/>
+  <circle cx="314" cy="232" r="14" fill="#1F63C2"/>
+  <circle cx="256" cy="175" r="14" fill="#1F63C2"/>
+
+  <circle cx="302" cy="312" r="42" fill="#0A3D91"/>
+  <path d="M283 312L297 326L323 298" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

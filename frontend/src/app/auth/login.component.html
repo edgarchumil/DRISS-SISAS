@@ -11,8 +11,21 @@
           <input type="text" formControlName="username" />
         </label>
         <label>
-          Contrasena
-          <input type="password" formControlName="password" />
+          Contraseña
+          <div class="password-field">
+            <input [type]="showPassword ? 'text' : 'password'" formControlName="password" />
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Ver contraseña'"
+              (click)="togglePasswordVisibility()"
+            >
+              <img
+                [src]="showPassword ? '/assets/password-lock.svg' : '/assets/password-unlock.svg'"
+                [alt]="showPassword ? 'Bloquear contraseña' : 'Ver contraseña'"
+              />
+            </button>
+          </div>
         </label>
         <button type="submit" [disabled]="isSubmitting">Ingresar</button>
         <span class="error" *ngIf="errorMessage">{{ errorMessage }}</span>

@@ -30,6 +30,13 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
+# Asegura pg_dump en macOS (Homebrew), útil para respaldo PostgreSQL local.
+if [ -x "/opt/homebrew/opt/libpq/bin/pg_dump" ]; then
+  export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+elif [ -x "/usr/local/opt/libpq/bin/pg_dump" ]; then
+  export PATH="/usr/local/opt/libpq/bin:$PATH"
+fi
+
 if [ "$USE_DOCKER_DB" = "1" ] && ! command -v docker >/dev/null 2>&1; then
   echo "[warn] docker no está instalado y USE_DOCKER_DB=1."
   echo "[warn] Se usará PostgreSQL externo/local (equivalente a USE_DOCKER_DB=0)."
@@ -52,6 +59,12 @@ if [ ! -x "$VENV_PY" ] || [ ! -x "$VENV_PIP" ]; then
 fi
 
 export DB_NAME DB_USER DB_PASS DB_HOST DB_PORT
+
+if command -v pg_dump >/dev/null 2>&1; then
+  echo "[init] pg_dump detectado: $(command -v pg_dump)"
+else
+  echo "[warn] pg_dump no detectado en PATH. El respaldo PostgreSQL puede fallar."
+fi
 
 if [ "$USE_DOCKER_DB" = "1" ]; then
   COMPOSE_CMD=""

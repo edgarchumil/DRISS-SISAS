@@ -63,6 +63,34 @@ input {
   border: 1px solid var(--sisas-border);
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 2.8rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  padding: 0.15rem 0.25rem;
+  margin: 0;
+  color: var(--sisas-blue-900);
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+}
+
 button {
   margin-top: 0.5rem;
   padding: 0.8rem 1rem;
@@ -105,5 +133,11 @@ button {
 .logo-image img {
   max-width: 100%;
   height: auto;
+  display: block;
+}
+
+.password-toggle img {
+  width: 1.25rem;
+  height: 1.25rem;
   display: block;
 }

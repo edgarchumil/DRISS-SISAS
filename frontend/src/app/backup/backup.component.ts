@@ -19,6 +19,7 @@ export class BackupComponent {
   errorMessage = '';
   showModal = false;
   password = '';
+  showPassword = false;
 
   private backupService = inject(BackupService);
   private authService = inject(AuthService);
@@ -27,12 +28,14 @@ export class BackupComponent {
   openConfirm() {
     this.errorMessage = '';
     this.password = '';
+    this.showPassword = false;
     this.showModal = true;
   }
 
   closeConfirm() {
     this.showModal = false;
     this.password = '';
+    this.showPassword = false;
   }
 
   downloadBackup() {
@@ -53,6 +56,7 @@ export class BackupComponent {
         this.isLoading = false;
         this.showModal = false;
         this.password = '';
+        this.showPassword = false;
       },
       error: (err: HttpErrorResponse) => {
         const fallback = 'Contrasena incorrecta o sin permisos.';
@@ -78,5 +82,9 @@ export class BackupComponent {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
   }
 }

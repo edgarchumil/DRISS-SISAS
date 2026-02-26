@@ -2,16 +2,16 @@
   <header class="page-header">
     <div>
       <h2>Reportes</h2>
-      <p>Consulta y descarga el reporte mensual por municipio.</p>
+      <p>Consulta y descarga el reporte mensual por DMS / DRISS / RED</p>
     </div>
     <button type="button" class="logout-btn" (click)="logout()">Salir</button>
   </header>
 
   <div class="filters">
     <label>
-      Municipio
+      DMS/RED LOCAL
       <select [(ngModel)]="selectedMunicipalityId">
-        <option [ngValue]="null">Selecciona un municipio</option>
+        <option [ngValue]="null">Selecciona DMS / DRISS / RED</option>
         <option [ngValue]="'all'">DMS Y DRISS Local</option>
         <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
           {{ municipality.name }}
@@ -39,24 +39,71 @@
       <thead>
         <tr>
           <th>Codigo</th>
-          <th>Categoria</th>
           <th>Material medico</th>
           <th>Tipo</th>
-          <th>Usuario</th>
+          <th>Observaciones</th>
           <th>Cantidad</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let item of report.items">
+        <tr *ngFor="let item of paginatedItems">
           <td>{{ item.code }}</td>
-          <td>{{ item.category }}</td>
           <td>{{ item.material_name }}</td>
           <td>{{ item.type === 'ingreso' ? 'Ingreso' : 'Egreso' }}</td>
-          <td>{{ item.user }}</td>
+          <td>{{ item.observations || '-' }}</td>
           <td>{{ item.quantity }}</td>
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="pagination" *ngIf="report && !isLoading && (report.items?.length || 0) > 0">
+    <button type="button" class="page-btn" [disabled]="currentPage === 1" (click)="changePage(-1)">
+      Anterior
+    </button>
+    <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+    <button type="button" class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(1)">
+      Siguiente
+    </button>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showScopeModal">
+    <div class="modal-card">
+      <h3>Reporte consolidado</h3>
+      <p>Selecciona si deseas todos los insumos o solo algunos de todos los municipios.</p>
+
+      <div class="scope-options">
+        <label class="scope-option">
+          <input type="radio" name="scopeType" [(ngModel)]="scopeType" [value]="'all'" />
+          Todos los insumos
+        </label>
+        <label class="scope-option">
+          <input type="radio" name="scopeType" [(ngModel)]="scopeType" [value]="'selected'" />
+          Seleccionar insumos
+        </label>
+      </div>
+
+      <div class="medications-picker" *ngIf="scopeType === 'selected'">
+        <label class="picker-title">Insumos disponibles</label>
+        <div class="picker-list">
+          <label class="picker-item" *ngFor="let medication of medications">
+            <input
+              type="checkbox"
+              [checked]="selectedMedicationIds.has(medication.id)"
+              (change)="toggleMedicationSelection(medication.id)"
+            />
+            {{ medication.material_name }}
+          </label>
+        </div>
+      </div>
+
+      <p class="error" *ngIf="scopeError">{{ scopeError }}</p>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="closeScopeModal()">Cancelar</button>
+        <button type="button" (click)="continueToFormat()">Continuar</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-overlay" *ngIf="showAllFormatsModal">
