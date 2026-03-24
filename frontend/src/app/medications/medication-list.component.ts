@@ -74,7 +74,10 @@ export class MedicationListComponent implements OnInit {
 
   fetch() {
     this.isLoading = true;
-    this.medicationService.list(this.searchTerm.trim() || undefined).subscribe({
+    const municipalityParam = this.isAllMunicipalities
+      ? 'all'
+      : this.selectedMunicipalityId;
+    this.medicationService.list(this.searchTerm.trim() || undefined, municipalityParam).subscribe({
       next: (response) => {
         this.medications = [...response.results].sort((a, b) =>
           a.material_name.localeCompare(b.material_name, 'es', { sensitivity: 'base' })
@@ -167,6 +170,7 @@ export class MedicationListComponent implements OnInit {
       this.municipalityError = '';
       this.stockSaveError = '';
       this.setPhysicalStockDisabled(false);
+      this.fetch();
       return;
     }
     if (value === 'all') {
@@ -179,6 +183,7 @@ export class MedicationListComponent implements OnInit {
       this.municipalityError = '';
       this.stockSaveError = '';
       this.setPhysicalStockDisabled(true);
+      this.fetch();
       this.municipalityService.getSummary().subscribe({
         next: (items) => {
           const map = new Map<number, number>();
@@ -206,6 +211,7 @@ export class MedicationListComponent implements OnInit {
     this.municipalityError = '';
     this.stockSaveError = '';
     this.setPhysicalStockDisabled(false);
+    this.fetch();
     if (!this.selectedMunicipalityId) {
       this.municipalityStock = null;
       return;
@@ -240,6 +246,15 @@ export class MedicationListComponent implements OnInit {
       return fallback;
     }
     return this.municipalityStockMap.get(medicationId) ?? 0;
+  }
+
+  getMonthsOfSupply(medication: Medication) {
+    const stock = this.getMunicipalityStock(medication.id, medication.physical_stock);
+    const monthlyAverage = Number(medication.monthly_demand_avg ?? 0);
+    if (monthlyAverage <= 0 || stock <= 0) {
+      return 0;
+    }
+    return Math.floor(stock / monthlyAverage);
   }
 
   getStockClass(value: number) {

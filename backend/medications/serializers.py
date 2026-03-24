@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from medications.municipality_catalog import get_display_municipality_name
 from medications.models import Medication, Municipality, MunicipalityStock, Movement
 
 
@@ -21,6 +22,11 @@ class MedicationSerializer(serializers.ModelSerializer):
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    def get_name(self, obj):
+        return get_display_municipality_name(obj.name)
+
     class Meta:
         model = Municipality
         fields = ["id", "name"]

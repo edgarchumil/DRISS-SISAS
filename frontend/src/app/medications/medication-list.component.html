@@ -65,7 +65,7 @@
           >
             {{ getMunicipalityStock(medication.id, medication.physical_stock) }}
           </td>
-          <td>{{ medication.months_of_supply }}</td>
+          <td>{{ getMonthsOfSupply(medication) }}</td>
           <td class="actions" *ngIf="isAdmin">
             <button class="icon-btn" type="button" aria-label="Editar" (click)="editMedication(medication)">
               &#9998;

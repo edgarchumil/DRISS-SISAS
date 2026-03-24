@@ -17,8 +17,16 @@ export class MedicationService {
 
   constructor(private http: HttpClient) {}
 
-  list(search?: string) {
-    const params = search ? { search } : undefined;
+  list(search?: string, municipality?: number | 'all' | null) {
+    const params: Record<string, string> = {};
+    if (search) {
+      params['search'] = search;
+    }
+    if (municipality === 'all') {
+      params['municipality'] = 'all';
+    } else if (typeof municipality === 'number') {
+      params['municipality'] = String(municipality);
+    }
     return this.http.get<PaginatedResponse<Medication>>(this.baseUrl + '/', { params });
   }
 

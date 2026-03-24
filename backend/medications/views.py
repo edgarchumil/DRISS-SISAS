@@ -13,6 +13,7 @@ from rest_framework import status
 from django.http import HttpResponse
 
 from accounts.permissions import MedicationAccessPermission
+from medications.municipality_catalog import ORDERED_MUNICIPALITY_CATALOG
 from medications.models import Medication, Municipality, MunicipalityStock, Movement
 from medications.serializers import (
     MedicationSerializer,
@@ -33,25 +34,39 @@ class MedicationViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        municipality_id = self._get_requested_municipality_id()
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             data = list(serializer.data)
-            self._inject_two_month_average(data)
+            self._inject_two_month_average(data, municipality_id=municipality_id)
             return self.get_paginated_response(data)
 
         serializer = self.get_serializer(queryset, many=True)
         data = list(serializer.data)
-        self._inject_two_month_average(data)
+        self._inject_two_month_average(data, municipality_id=municipality_id)
         return Response(data)
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
         if isinstance(response.data, dict):
-            self._inject_two_month_average([response.data])
+            self._inject_two_month_average(
+                [response.data],
+                municipality_id=self._get_requested_municipality_id(),
+            )
         return response
 
-    def _inject_two_month_average(self, items):
+    def _get_requested_municipality_id(self):
+        raw_value = (self.request.query_params.get("municipality") or "").strip()
+        if not raw_value or raw_value.lower() == "all":
+            return None
+        try:
+            municipality_id = int(raw_value)
+        except (TypeError, ValueError):
+            return None
+        return municipality_id if municipality_id > 0 else None
+
+    def _inject_two_month_average(self, items, municipality_id=None):
         if not items:
             return
 
@@ -59,9 +74,15 @@ class MedicationViewSet(viewsets.ModelViewSet):
         if not medication_ids:
             return
 
+        stock_queryset = MunicipalityStock.objects.filter(medication_id__in=medication_ids)
+        movement_queryset = Movement.objects.filter(medication_id__in=medication_ids)
+        if municipality_id:
+            stock_queryset = stock_queryset.filter(municipality_id=municipality_id)
+            movement_queryset = movement_queryset.filter(municipality_id=municipality_id)
+
         current_stock_map = {
             row["medication_id"]: row["total"] or 0
-            for row in MunicipalityStock.objects.filter(medication_id__in=medication_ids)
+            for row in stock_queryset
             .values("medication_id")
             .annotate(total=models.Sum("stock"))
         }
@@ -82,9 +103,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
         )
 
         movement_rows = (
-            Movement.objects.filter(medication_id__in=medication_ids)
-            .values("medication_id")
-            .annotate(
+            movement_queryset.values("medication_id").annotate(
                 in_after_prev=models.Sum(
                     "quantity",
                     filter=models.Q(type="ingreso", created_at__gt=cutoff_prev),
@@ -158,13 +177,44 @@ class MunicipalityViewSet(viewsets.ModelViewSet):
     permission_classes = [MedicationAccessPermission]
 
     def get_queryset(self):
+        order_cases = []
+        for index, item in enumerate(ORDERED_MUNICIPALITY_CATALOG, start=1):
+            for name in [item["name"], *item["aliases"]]:
+                order_cases.append(models.When(name__iexact=name, then=models.Value(index)))
         return Municipality.objects.annotate(
             is_global=models.Case(
                 models.When(name__iexact=GLOBAL_MUNICIPALITY_NAME, then=models.Value(0)),
                 default=models.Value(1),
                 output_field=models.IntegerField(),
-            )
-        ).order_by("is_global", "name")
+            ),
+            catalog_order=models.Case(
+                *order_cases,
+                default=models.Value(len(ORDERED_MUNICIPALITY_CATALOG) + 1),
+                output_field=models.IntegerField(),
+            ),
+        ).order_by("is_global", "catalog_order", "name")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        seen_names = set()
+        unique_items = []
+
+        for municipality in queryset:
+            display_name = self.get_serializer(municipality).data["name"]
+            if display_name in seen_names:
+                continue
+            seen_names.add(display_name)
+            unique_items.append(municipality)
+
+        serializer = self.get_serializer(unique_items, many=True)
+        return Response(
+            {
+                "count": len(unique_items),
+                "next": None,
+                "previous": None,
+                "results": serializer.data,
+            }
+        )
 
     @action(detail=True, methods=["get"])
     def stock(self, request, pk=None):
