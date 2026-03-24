@@ -108,7 +108,6 @@ class MunicipalityMonthlyReportView(APIView):
             items.append(
                 {
                     "code": movement.medication.code,
-                    "category": movement.medication.category,
                     "material_name": movement.medication.material_name,
                     "quantity": movement.quantity,
                     "type": movement.type,
@@ -218,7 +217,7 @@ class MunicipalityMonthlyReportDownloadView(APIView):
         elements.append(summary_table)
         elements.append(Spacer(1, 10))
 
-        data = [["No.", "Codigo", "Categoria", "Material medico", "Tipo", "Usuario", "Cantidad"]]
+        data = [["No.", "Codigo", "Material medico", "Tipo", "Usuario", "Cantidad"]]
         row_index = 1
         for item in movements:
             user_name = (
@@ -230,7 +229,6 @@ class MunicipalityMonthlyReportDownloadView(APIView):
                 [
                     str(row_index),
                     item.medication.code,
-                    item.medication.category,
                     item.medication.material_name,
                     "Ingreso" if item.type == "ingreso" else "Egreso",
                     user_name,
@@ -238,7 +236,7 @@ class MunicipalityMonthlyReportDownloadView(APIView):
                 ]
             )
             row_index += 1
-        table = Table(data, hAlign="CENTER", colWidths=[30, 55, 60, 175, 60, 150, 55])
+        table = Table(data, hAlign="CENTER", colWidths=[30, 55, 235, 60, 150, 55])
         table.setStyle(
             TableStyle(
                 [
@@ -248,9 +246,9 @@ class MunicipalityMonthlyReportDownloadView(APIView):
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fb")]),
-                    ("ALIGN", (0, 0), (2, -1), "CENTER"),
-                    ("ALIGN", (3, 0), (3, -1), "LEFT"),
-                    ("ALIGN", (4, 0), (6, -1), "CENTER"),
+                    ("ALIGN", (0, 0), (1, -1), "CENTER"),
+                    ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                    ("ALIGN", (3, 0), (5, -1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 6),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 6),
@@ -278,16 +276,16 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             canvas_obj.rect(0, header_top - 90, width, 90, fill=1, stroke=0)
             canvas_obj.setFillColor(colors.white)
             canvas_obj.setFont("Helvetica-Bold", 16)
-            canvas_obj.drawCentredString(width / 2, header_top - 40, "REPORTE MENSUAL DE")
+            canvas_obj.drawCentredString(width / 2, header_top - 40, "REPORTE QUINCENAL DE")
             canvas_obj.setFont("Helvetica-Bold", 20)
-            canvas_obj.drawCentredString(width / 2, header_top - 65, "INSUMOS / MATERIALES")
+            canvas_obj.drawCentredString(width / 2, header_top - 65, "INSUMOS / REACTIVOS")
 
             canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
             canvas_obj.setFont("Helvetica-Bold", 12)
             canvas_obj.drawCentredString(
                 width / 2,
                 height - 15,
-                "DIRECCION DE AREA DE SALUD DE SOLOLÁ",
+                "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD",
             )
 
             # Info box
@@ -296,13 +294,11 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             canvas_obj.roundRect(60, info_box_top - 45, width - 120, 45, 8, fill=1, stroke=0)
             canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
             canvas_obj.setFont("Helvetica-Bold", 10)
-            period_label = format_period(year_value, month_value)
             date_label = timezone.localdate().strftime("%d/%m/%Y")
             username = request.user.get_full_name() or request.user.username
-            canvas_obj.drawString(80, info_box_top - 20, f"Municipio: {municipality.name}")
-            canvas_obj.drawString(80, info_box_top - 35, f"Periodo: {period_label}")
+            canvas_obj.drawString(80, info_box_top - 20, f"DMS/RED LOCAL: {municipality.name}")
             canvas_obj.drawString(width / 2 + 10, info_box_top - 20, f"Fecha: {date_label}")
-            canvas_obj.drawString(width / 2 + 10, info_box_top - 35, f"Usuario: {username}")
+            canvas_obj.drawString(80, info_box_top - 35, f"Usuario: {username}")
 
             # Summary pills
             total_movements = movements.count()
@@ -363,7 +359,6 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
                     index,
                     movement.municipality.name if movement.municipality else "-",
                     movement.medication.code,
-                    movement.medication.category,
                     movement.medication.material_name,
                     "Ingreso" if movement.type == "ingreso" else "Egreso",
                     user_name,
@@ -424,9 +419,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             sheet.print_options.horizontalCentered = True
 
         # Detail data maps
-        month_label = format_period(year_value, month_value)
         downloaded_by = request.user.get_full_name() or request.user.username
-        footer_label = f"Descargado por: {downloaded_by} | Generado por: SISAS"
         movements = Movement.objects.filter(
             created_at__year=year_value,
             created_at__month=month_value,
@@ -494,34 +487,34 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         general_cols = [get_column_letter(start_col_idx + i) for i in range(6)]  # C:H
         title_row_1 = 5
         title_row_2 = 6
-        period_row = 7
+        dms_row = 7
         date_row = 8
-        meta_row = 9
+        user_row = 9
         table_header_row = 10
 
         ws = wb.active
         ws.title = "Detalle general"
         ws.merge_cells(f"{general_cols[0]}{title_row_1}:{general_cols[-1]}{title_row_1}")
         ws.merge_cells(f"{general_cols[0]}{title_row_2}:{general_cols[-1]}{title_row_2}")
-        ws.merge_cells(f"{general_cols[0]}{period_row}:{general_cols[-1]}{period_row}")
+        ws.merge_cells(f"{general_cols[0]}{dms_row}:{general_cols[-1]}{dms_row}")
         ws.merge_cells(f"{general_cols[0]}{date_row}:{general_cols[-1]}{date_row}")
-        ws.merge_cells(f"{general_cols[0]}{meta_row}:{general_cols[-1]}{meta_row}")
+        ws.merge_cells(f"{general_cols[0]}{user_row}:{general_cols[-1]}{user_row}")
 
-        ws[f"{general_cols[0]}{title_row_1}"] = "DIRECCION DE AREA DE SALUD DE SOLOLÁ"
-        ws[f"{general_cols[0]}{title_row_2}"] = "REPORTE MENSUAL DE INSUMOS / MATERIALES"
-        ws[f"{general_cols[0]}{period_row}"] = f"Periodo: {month_label}"
+        ws[f"{general_cols[0]}{title_row_1}"] = "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD"
+        ws[f"{general_cols[0]}{title_row_2}"] = "REPORTE QUINCENAL DE INSUMOS / REACTIVOS"
+        ws[f"{general_cols[0]}{dms_row}"] = "DMS/RED LOCAL: DMS Y DRISS Local"
         ws[f"{general_cols[0]}{date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
-        ws[f"{general_cols[0]}{meta_row}"] = footer_label
+        ws[f"{general_cols[0]}{user_row}"] = f"Usuario: {downloaded_by}"
 
         ws[f"{general_cols[0]}{title_row_1}"].font = title_font
         ws[f"{general_cols[0]}{title_row_2}"].font = title_font
         ws[f"{general_cols[0]}{title_row_1}"].alignment = centered_alignment
         ws[f"{general_cols[0]}{title_row_2}"].alignment = centered_alignment
-        ws[f"{general_cols[0]}{period_row}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{dms_row}"].alignment = centered_alignment
         ws[f"{general_cols[0]}{date_row}"].alignment = centered_alignment
-        ws[f"{general_cols[0]}{meta_row}"].alignment = centered_alignment
+        ws[f"{general_cols[0]}{user_row}"].alignment = centered_alignment
 
-        for col_idx, value in enumerate(["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
+        for col_idx, value in enumerate(["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
             ws.cell(row=table_header_row, column=start_col_idx + col_idx, value=value)
         style_header(ws, table_header_row, general_cols)
 
@@ -589,33 +582,29 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             muni_title_row_1 = 5
             muni_title_row_2 = 6
             muni_name_row = 7
-            muni_period_row = 8
-            muni_date_row = 9
-            muni_meta_row = 10
-            muni_table_header_row = 11
+            muni_date_row = 8
+            muni_user_row = 9
+            muni_table_header_row = 10
 
             sheet.merge_cells(f"{muni_cols[0]}{muni_title_row_1}:{muni_cols[-1]}{muni_title_row_1}")
             sheet.merge_cells(f"{muni_cols[0]}{muni_title_row_2}:{muni_cols[-1]}{muni_title_row_2}")
             sheet.merge_cells(f"{muni_cols[0]}{muni_name_row}:{muni_cols[-1]}{muni_name_row}")
-            sheet.merge_cells(f"{muni_cols[0]}{muni_period_row}:{muni_cols[-1]}{muni_period_row}")
             sheet.merge_cells(f"{muni_cols[0]}{muni_date_row}:{muni_cols[-1]}{muni_date_row}")
-            sheet.merge_cells(f"{muni_cols[0]}{muni_meta_row}:{muni_cols[-1]}{muni_meta_row}")
+            sheet.merge_cells(f"{muni_cols[0]}{muni_user_row}:{muni_cols[-1]}{muni_user_row}")
 
-            sheet[f"{muni_cols[0]}{muni_title_row_1}"] = "DIRECCION DE AREA DE SALUD DE SOLOLÁ"
-            sheet[f"{muni_cols[0]}{muni_title_row_2}"] = "REPORTE MENSUAL DE INSUMOS / MATERIALES"
-            sheet[f"{muni_cols[0]}{muni_name_row}"] = f"Municipio: {municipality_name}"
-            sheet[f"{muni_cols[0]}{muni_period_row}"] = f"Periodo: {month_label}"
+            sheet[f"{muni_cols[0]}{muni_title_row_1}"] = "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD"
+            sheet[f"{muni_cols[0]}{muni_title_row_2}"] = "REPORTE QUINCENAL DE INSUMOS / REACTIVOS"
+            sheet[f"{muni_cols[0]}{muni_name_row}"] = f"DMS/RED LOCAL: {municipality_name}"
             sheet[f"{muni_cols[0]}{muni_date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
-            sheet[f"{muni_cols[0]}{muni_meta_row}"] = footer_label
+            sheet[f"{muni_cols[0]}{muni_user_row}"] = f"Usuario: {downloaded_by}"
 
             sheet[f"{muni_cols[0]}{muni_title_row_1}"].font = title_font
             sheet[f"{muni_cols[0]}{muni_title_row_2}"].font = title_font
             sheet[f"{muni_cols[0]}{muni_title_row_1}"].alignment = centered_alignment
             sheet[f"{muni_cols[0]}{muni_title_row_2}"].alignment = centered_alignment
             sheet[f"{muni_cols[0]}{muni_name_row}"].alignment = centered_alignment
-            sheet[f"{muni_cols[0]}{muni_period_row}"].alignment = centered_alignment
             sheet[f"{muni_cols[0]}{muni_date_row}"].alignment = centered_alignment
-            sheet[f"{muni_cols[0]}{muni_meta_row}"].alignment = centered_alignment
+            sheet[f"{muni_cols[0]}{muni_user_row}"].alignment = centered_alignment
 
             for col_idx, value in enumerate(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
                 sheet.cell(row=muni_table_header_row, column=muni_start_col_idx + col_idx, value=value)
@@ -666,7 +655,6 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         styles = getSampleStyleSheet()
         elements = []
 
-        period_label = format_period(year_value, month_value)
         username = request.user.get_full_name() or request.user.username
         date_label = timezone.localdate().strftime("%d/%m/%Y")
 
@@ -751,7 +739,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             mid, medid = item
             return (municipalities.get(mid, ""), medications.get(medid, ""))
 
-        data = [["No.", "Municipio", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]]
+        data = [["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]]
         for index, (municipality_id, medication_id) in enumerate(sorted(keys, key=sort_key), start=1):
             mun_name = municipalities.get(municipality_id, "-")
             med_name = medications.get(medication_id, "-")
@@ -796,15 +784,15 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             canvas_obj.rect(0, height - 30, width, 30, fill=1, stroke=0)
             canvas_obj.setFont("Helvetica-Bold", 10)
             canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
-            canvas_obj.drawCentredString(width / 2, height - 20, "DIRECCION DE AREA DE SALUD DE SOLOLÁ")
+            canvas_obj.drawCentredString(width / 2, height - 20, "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD")
 
             # Main title bar
             canvas_obj.setFillColor(colors.HexColor("#1f4f9c"))
             canvas_obj.rect(0, height - 95, width, 55, fill=1, stroke=0)
             canvas_obj.setFillColor(colors.white)
             canvas_obj.setFont("Helvetica-Bold", 14)
-            canvas_obj.drawCentredString(width / 2, height - 60, "REPORTE MENSUAL DE")
-            canvas_obj.drawCentredString(width / 2, height - 78, "INSUMOS / MATERIALES")
+            canvas_obj.drawCentredString(width / 2, height - 60, "REPORTE QUINCENAL DE")
+            canvas_obj.drawCentredString(width / 2, height - 78, "INSUMOS / REACTIVOS")
 
             # Info box
             canvas_obj.setFillColor(colors.HexColor("#eef3fb"))
@@ -816,10 +804,9 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             canvas_obj.setFont("Helvetica-Bold", 9)
             left_x = info_box_x + 20
             right_x = info_box_x + info_box_width / 2 + 20
-            canvas_obj.drawString(left_x, info_top - 20, "Municipio: DMS Y DRISS Local")
-            canvas_obj.drawString(left_x, info_top - 35, f"Periodo: {period_label}")
+            canvas_obj.drawString(left_x, info_top - 20, "DMS/RED LOCAL: DMS Y DRISS Local")
             canvas_obj.drawString(right_x, info_top - 20, f"Fecha: {date_label}")
-            canvas_obj.drawString(right_x, info_top - 35, f"Usuario: {username}")
+            canvas_obj.drawString(left_x, info_top - 35, f"Usuario: {username}")
 
             # Summary pills
             pill_top = info_top - 58

@@ -36,7 +36,7 @@ export const routes: Routes = [
     ],
   },
   { path: 'movements', component: MovementsComponent, canActivate: [authGuard] },
-  { path: 'reports', component: ReportsComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'reports', component: ReportsComponent, canActivate: [authGuard] },
   { path: 'audit', component: AuditComponent, canActivate: [authGuard, adminGuard] },
   { path: 'backup', component: BackupComponent, canActivate: [authGuard, adminGuard] },
 ];

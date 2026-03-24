@@ -1,6 +1,5 @@
 export interface Medication {
   id: number;
-  category: string;
   code: string;
   material_name: string;
   monthly_demand_avg: number;

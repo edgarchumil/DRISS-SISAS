@@ -5,8 +5,8 @@ from medications.models import Medication, Municipality, MunicipalityStock, Move
 
 @admin.register(Medication)
 class MedicationAdmin(admin.ModelAdmin):
-    list_display = ("material_name", "category", "code", "physical_stock", "months_of_supply")
-    search_fields = ("material_name", "category", "code")
+    list_display = ("material_name", "code", "physical_stock", "months_of_supply")
+    search_fields = ("material_name", "code")
 
 
 @admin.register(Municipality)

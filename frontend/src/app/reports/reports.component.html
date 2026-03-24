@@ -10,9 +10,9 @@
   <div class="filters">
     <label>
       DMS/RED LOCAL
-      <select [(ngModel)]="selectedMunicipalityId">
+      <select [(ngModel)]="selectedMunicipalityId" [disabled]="!isAdmin && !!userMunicipality">
         <option [ngValue]="null">Selecciona DMS / DRISS / RED</option>
-        <option [ngValue]="'all'">DMS Y DRISS Local</option>
+        <option [ngValue]="'all'" *ngIf="isAdmin">DMS Y DRISS Local</option>
         <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
           {{ municipality.name }}
         </option>

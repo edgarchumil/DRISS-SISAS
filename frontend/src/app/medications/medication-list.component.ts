@@ -51,7 +51,6 @@ export class MedicationListComponent implements OnInit {
   private router = inject(Router);
 
   form = this.fb.nonNullable.group({
-    category: ['', Validators.required],
     code: ['', Validators.required],
     material_name: ['', Validators.required],
     physical_stock: [0, [Validators.required, Validators.min(0)]],
@@ -272,7 +271,6 @@ export class MedicationListComponent implements OnInit {
 
   openModal() {
     this.form.reset({
-      category: '',
       code: '',
       material_name: '',
       physical_stock: this.selectedMunicipalityId ? 0 : 0,
@@ -294,7 +292,6 @@ export class MedicationListComponent implements OnInit {
       ? this.municipalityStockMap.get(medication.id) ?? 0
       : medication.physical_stock;
     this.form.patchValue({
-      category: medication.category,
       code: medication.code,
       material_name: medication.material_name,
       physical_stock: municipalityStock,

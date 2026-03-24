@@ -14,7 +14,6 @@ export interface MunicipalityMonthlyReport {
   total_egresos: number;
   items: Array<{
     code: string;
-    category: string;
     material_name: string;
     quantity: number;
     type: 'ingreso' | 'egreso';

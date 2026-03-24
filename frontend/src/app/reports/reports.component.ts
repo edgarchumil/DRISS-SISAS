@@ -7,6 +7,7 @@ import { AuthService } from '../core/auth.service';
 import { MedicationService } from '../core/medication.service';
 import { MunicipalityService } from '../core/municipality.service';
 import { ReportService, MunicipalityMonthlyReport } from '../core/report.service';
+import { UserService } from '../core/user.service';
 import { Medication, Municipality } from '../shared/models';
 
 @Component({
@@ -33,14 +34,18 @@ export class ReportsComponent implements OnInit {
   selectedMedicationIds = new Set<number>();
   scopeType: 'all' | 'selected' = 'all';
   scopeError = '';
+  isAdmin = false;
+  userMunicipality = '';
 
   private municipalityService = inject(MunicipalityService);
   private medicationService = inject(MedicationService);
   private reportService = inject(ReportService);
+  private userService = inject(UserService);
   private authService = inject(AuthService);
   private router = inject(Router);
 
   ngOnInit() {
+    this.loadCurrentUser();
     this.loadMunicipalities();
     this.loadMedications();
   }
@@ -49,6 +54,17 @@ export class ReportsComponent implements OnInit {
     this.municipalityService.list().subscribe({
       next: (response) => {
         this.municipalities = response.results;
+        this.applyInitialMunicipalitySelection();
+      },
+    });
+  }
+
+  loadCurrentUser() {
+    this.userService.me().subscribe({
+      next: (user) => {
+        this.userMunicipality = (user.municipality || '').trim();
+        this.isAdmin = (user.roles || []).includes('administradores');
+        this.applyInitialMunicipalitySelection();
       },
     });
   }
@@ -172,6 +188,29 @@ export class ReportsComponent implements OnInit {
         this.errorMessage = 'No se pudo descargar el reporte consolidado.';
       },
     });
+  }
+
+  private applyInitialMunicipalitySelection() {
+    if (!this.municipalities.length || this.isAdmin || !this.userMunicipality) {
+      return;
+    }
+    const match = this.matchMunicipalityByName(this.userMunicipality);
+    if (match) {
+      this.selectedMunicipalityId = match.id;
+    }
+  }
+
+  private normalizeText(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private matchMunicipalityByName(name: string) {
+    const target = this.normalizeText(name);
+    return this.municipalities.find((item) => this.normalizeText(item.name) === target);
   }
 
   private getCurrentMonth() {

@@ -9,7 +9,6 @@ class MedicationSerializer(serializers.ModelSerializer):
         model = Medication
         fields = [
             "id",
-            "category",
             "code",
             "material_name",
             "monthly_demand_avg",

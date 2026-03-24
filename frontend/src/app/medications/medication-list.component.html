@@ -1,8 +1,8 @@
 <section class="page">
   <header class="page-header">
     <div>
-      <h2>Insumos / Materiales</h2>
-      <p>Registro general y control de inventario de insumos y materiales</p>
+      <h2>Insumos / Reactivos</h2>
+      <p>Registro general y control de inventario de insumos y reactivos</p>
     </div>
     <button type="button" class="logout-btn" (click)="logout()">Salir</button>
   </header>
@@ -44,7 +44,6 @@
       <thead>
         <tr>
           <th>No.</th>
-          <th>Categoria</th>
           <th>Codigo</th>
           <th>Material medico</th>
           <th>Promedio mensual</th>
@@ -56,7 +55,6 @@
       <tbody>
         <tr *ngFor="let medication of paginated; index as i">
           <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
-          <td>{{ medication.category }}</td>
           <td>{{ medication.code }}</td>
           <td>{{ medication.material_name }}</td>
           <td>{{ medication.monthly_demand_avg }}</td>
@@ -97,17 +95,10 @@
     <div class="modal-card">
       <header>
         <h3>{{ isEdit ? 'Editar insumo' : 'Nuevo insumo' }}</h3>
-        <p>Completa el formulario para registrar el insumo o material.</p>
+        <p>Completa el formulario para registrar el insumo o reactivo.</p>
       </header>
 
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <label>
-          Categoria
-          <input type="text" formControlName="category" />
-          <span class="field-error" *ngIf="form.controls.category.touched && form.controls.category.invalid">
-            Campo requerido.
-          </span>
-        </label>
         <label>
           Codigo
           <input type="text" formControlName="code" />

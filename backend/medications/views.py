@@ -391,21 +391,20 @@ class MovementViewSet(viewsets.ModelViewSet):
         styles = getSampleStyleSheet()
         elements = []
 
-        data = [["No.", "Codigo", "Categoria", "Material medico", "Cantidad"]]
+        data = [["No.", "Codigo", "Material medico", "Cantidad"]]
         row_index = 1
         for movement in movements:
             data.append(
                 [
                     str(row_index),
                     movement.medication.code,
-                    movement.medication.category,
                     movement.medication.material_name,
                     str(movement.quantity),
                 ]
             )
             row_index += 1
 
-        table = Table(data, hAlign="CENTER", colWidths=[35, 70, 80, 280, 70])
+        table = Table(data, hAlign="CENTER", colWidths=[35, 70, 360, 70])
         table.setStyle(
             TableStyle(
                 [
@@ -415,9 +414,9 @@ class MovementViewSet(viewsets.ModelViewSet):
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fb")]),
-                    ("ALIGN", (0, 0), (2, -1), "CENTER"),
-                    ("ALIGN", (3, 0), (3, -1), "LEFT"),
-                    ("ALIGN", (4, 0), (4, -1), "CENTER"),
+                    ("ALIGN", (0, 0), (1, -1), "CENTER"),
+                    ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                    ("ALIGN", (3, 0), (3, -1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -450,7 +449,7 @@ class MovementViewSet(viewsets.ModelViewSet):
             canvas_obj.setFont("Helvetica-Bold", 16)
             canvas_obj.drawCentredString(width / 2, header_top - 40, "DESPACHO DE INSUMOS")
             canvas_obj.setFont("Helvetica-Bold", 20)
-            canvas_obj.drawCentredString(width / 2, header_top - 65, "INSUMOS / MATERIALES")
+            canvas_obj.drawCentredString(width / 2, header_top - 65, "INSUMOS / REACTIVOS")
 
             canvas_obj.setFillColor(colors.HexColor("#0f2c5c"))
             canvas_obj.setFont("Helvetica-Bold", 12)

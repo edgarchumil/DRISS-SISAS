@@ -23,7 +23,6 @@ export class MedicationFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   form = this.fb.nonNullable.group({
-    category: ['', Validators.required],
     code: ['', Validators.required],
     material_name: ['', Validators.required],
     physical_stock: [0, [Validators.required, Validators.min(0)]],
