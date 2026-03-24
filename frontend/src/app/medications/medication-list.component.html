@@ -27,7 +27,7 @@
           [disabled]="!isAdmin && !!userMunicipality"
           (change)="onMunicipalityChange(municipalitySelect.value)"
         >
-          <option value="all" *ngIf="isAdmin">DMS Y DRISS Local</option>
+          <option value="all" *ngIf="isAdmin">CONSOLIDADO GENERAL</option>
           <option *ngFor="let municipality of municipalities" [value]="municipality.id">
             {{ municipality.name }}
           </option>

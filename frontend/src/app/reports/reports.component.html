@@ -12,7 +12,7 @@
       DMS/RED LOCAL
       <select [(ngModel)]="selectedMunicipalityId" [disabled]="!isAdmin && !!userMunicipality">
         <option [ngValue]="null">Selecciona DMS / DRISS / RED</option>
-        <option [ngValue]="'all'" *ngIf="isAdmin">DMS Y DRISS Local</option>
+        <option [ngValue]="'all'" *ngIf="isAdmin">CONSOLIDADO GENERAL</option>
         <option *ngFor="let municipality of municipalities" [ngValue]="municipality.id">
           {{ municipality.name }}
         </option>
@@ -24,7 +24,22 @@
     </label>
     <div class="filter-actions">
       <button type="button" (click)="fetchReport()">Ver reporte</button>
-      <button type="button" class="secondary" (click)="downloadReport()">Descargar PDF</button>
+      <button
+        type="button"
+        class="secondary"
+        (click)="downloadReport('pdf')"
+        *ngIf="report && !isLoading"
+      >
+        Descargar PDF
+      </button>
+      <button
+        type="button"
+        class="secondary"
+        (click)="downloadReport('excel')"
+        *ngIf="report && !isLoading"
+      >
+        Descargar EXCEL
+      </button>
     </div>
   </div>
 
@@ -38,20 +53,22 @@
     <table>
       <thead>
         <tr>
+          <th>No.</th>
           <th>Codigo</th>
           <th>Material medico</th>
-          <th>Tipo</th>
-          <th>Observaciones</th>
-          <th>Cantidad</th>
+          <th>Ingresos</th>
+          <th>Egresos</th>
+          <th>Existencia</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let item of paginatedItems">
+        <tr *ngFor="let item of paginatedItems; index as i">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
           <td>{{ item.code }}</td>
           <td>{{ item.material_name }}</td>
-          <td>{{ item.type === 'ingreso' ? 'Ingreso' : 'Egreso' }}</td>
-          <td>{{ item.observations || '-' }}</td>
-          <td>{{ item.quantity }}</td>
+          <td>{{ item.ingresos }}</td>
+          <td>{{ item.egresos }}</td>
+          <td>{{ item.real_time_stock }}</td>
         </tr>
       </tbody>
     </table>

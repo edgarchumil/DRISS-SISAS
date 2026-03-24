@@ -109,7 +109,7 @@ export class ReportsComponent implements OnInit {
     });
   }
 
-  downloadReport() {
+  downloadReport(format: 'pdf' | 'excel' = 'pdf') {
     if (this.selectedMunicipalityId === 'all') {
       this.openScopeModal();
       return;
@@ -119,12 +119,13 @@ export class ReportsComponent implements OnInit {
       return;
     }
     this.errorMessage = '';
-    this.reportService.downloadMunicipalityMonthly(this.selectedMunicipalityId, this.selectedMonth).subscribe({
+    this.reportService.downloadMunicipalityMonthly(this.selectedMunicipalityId, this.selectedMonth, format).subscribe({
       next: (blob) => {
+        const ext = format === 'pdf' ? 'pdf' : 'xlsx';
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `reporte_mensual_${this.selectedMonth}.pdf`;
+        link.download = `reporte_mensual_${this.selectedMonth}.${ext}`;
         link.click();
         window.URL.revokeObjectURL(url);
       },

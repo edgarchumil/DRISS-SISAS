@@ -8,7 +8,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import MedicationAccessPermission
+from medications.municipality_catalog import (
+    ORDERED_MUNICIPALITY_NAMES,
+    get_display_municipality_name,
+)
 from medications.models import Medication, Municipality, Movement, MunicipalityStock
+from django.db.models import Case, IntegerField, Sum, When
 
 MONTHS_ES = [
     "Enero",
@@ -59,6 +64,83 @@ def parse_medication_ids(value: str | None):
     return sorted(set(ids))
 
 
+def get_report_municipality_names() -> list[str]:
+    return list(ORDERED_MUNICIPALITY_NAMES)
+
+
+def build_municipality_medication_report(municipality, year_value: int, month_value: int):
+    medications = list(
+        Medication.objects.order_by("material_name").values("id", "code", "material_name")
+    )
+    stock_map = {
+        row["medication_id"]: row["total"] or 0
+        for row in MunicipalityStock.objects.filter(municipality=municipality)
+        .values("medication_id")
+        .annotate(total=Sum("stock"))
+    }
+    movement_rows = (
+        Movement.objects.filter(
+            municipality=municipality,
+            created_at__year=year_value,
+            created_at__month=month_value,
+        )
+        .values("medication_id")
+        .annotate(
+            ingresos=Sum(
+                Case(
+                    When(type="ingreso", then="quantity"),
+                    default=0,
+                    output_field=IntegerField(),
+                )
+            ),
+            egresos=Sum(
+                Case(
+                    When(type="egreso", then="quantity"),
+                    default=0,
+                    output_field=IntegerField(),
+                )
+            ),
+        )
+    )
+    movement_map = {
+        row["medication_id"]: {
+            "ingresos": row["ingresos"] or 0,
+            "egresos": row["egresos"] or 0,
+        }
+        for row in movement_rows
+    }
+
+    items = []
+    total_ingresos = 0
+    total_egresos = 0
+    total_quantity = 0
+
+    for medication in medications:
+        medication_id = medication["id"]
+        ingresos = movement_map.get(medication_id, {}).get("ingresos", 0)
+        egresos = movement_map.get(medication_id, {}).get("egresos", 0)
+        stock = stock_map.get(medication_id, 0)
+        items.append(
+            {
+                "code": medication["code"],
+                "material_name": medication["material_name"],
+                "ingresos": ingresos,
+                "egresos": egresos,
+                "real_time_stock": stock,
+            }
+        )
+        total_ingresos += ingresos
+        total_egresos += egresos
+        total_quantity += ingresos + egresos
+
+    return {
+        "items": items,
+        "total_quantity": total_quantity,
+        "total_ingresos": total_ingresos,
+        "total_egresos": total_egresos,
+    }
+
+
 class MunicipalityMonthlyReportView(APIView):
     permission_classes = [IsAuthenticated, MedicationAccessPermission]
 
@@ -86,40 +168,7 @@ class MunicipalityMonthlyReportView(APIView):
         except (ValueError, Municipality.DoesNotExist):
             return Response({"detail": "Municipio invalido."}, status=400)
 
-        movements = (
-            Movement.objects.filter(
-                municipality=municipality,
-                created_at__year=year_value,
-                created_at__month=month_value,
-            )
-            .select_related("medication", "user")
-            .order_by("created_at", "id")
-        )
-        items = []
-        total_quantity = 0
-        total_ingresos = 0
-        total_egresos = 0
-        for movement in movements:
-            user_name = (
-                movement.user.get_full_name() or movement.user.username
-                if movement.user
-                else "-"
-            )
-            items.append(
-                {
-                    "code": movement.medication.code,
-                    "material_name": movement.medication.material_name,
-                    "quantity": movement.quantity,
-                    "type": movement.type,
-                    "user": user_name,
-                    "observations": (movement.notes or "").strip() or "-",
-                }
-            )
-            total_quantity += movement.quantity
-            if movement.type == "ingreso":
-                total_ingresos += 1
-            else:
-                total_egresos += 1
+        report_data = build_municipality_medication_report(municipality, year_value, month_value)
 
         return Response(
             {
@@ -127,10 +176,10 @@ class MunicipalityMonthlyReportView(APIView):
                 "municipality_name": municipality.name,
                 "year": year_value,
                 "month": month_value,
-                "total_quantity": total_quantity,
-                "total_ingresos": total_ingresos,
-                "total_egresos": total_egresos,
-                "items": items,
+                "total_quantity": report_data["total_quantity"],
+                "total_ingresos": report_data["total_ingresos"],
+                "total_egresos": report_data["total_egresos"],
+                "items": report_data["items"],
             }
         )
 
@@ -141,6 +190,7 @@ class MunicipalityMonthlyReportDownloadView(APIView):
     def get(self, request):
         municipality_id = request.query_params.get("municipality_id")
         month = request.query_params.get("month")
+        export_format = (request.query_params.get("export_format") or "pdf").lower()
         year_value, month_value = parse_month(month)
 
         if not municipality_id:
@@ -159,15 +209,10 @@ class MunicipalityMonthlyReportDownloadView(APIView):
         except (ValueError, Municipality.DoesNotExist):
             return Response({"detail": "Municipio invalido."}, status=400)
 
-        movements = (
-            Movement.objects.filter(
-                municipality=municipality,
-                created_at__year=year_value,
-                created_at__month=month_value,
-            )
-            .select_related("medication", "user")
-            .order_by("created_at", "id")
-        )
+        report_data = build_municipality_medication_report(municipality, year_value, month_value)
+        if export_format == "excel":
+            return self._build_excel(report_data, municipality, year_value, month_value, request)
+
         try:
             from io import BytesIO
             from reportlab.lib import colors
@@ -185,9 +230,9 @@ class MunicipalityMonthlyReportDownloadView(APIView):
         styles = getSampleStyleSheet()
         elements = []
 
-        total_movements = movements.count()
-        total_ingresos = sum(1 for item in movements if item.type == "ingreso")
-        total_egresos = sum(1 for item in movements if item.type == "egreso")
+        total_movements = report_data["total_quantity"]
+        total_ingresos = report_data["total_ingresos"]
+        total_egresos = report_data["total_egresos"]
 
         summary_data = [
             ["", f"Total de movimientos: {total_movements}", "", f"Ingresos: {total_ingresos}", "", f"Egresos: {total_egresos}"],
@@ -217,26 +262,21 @@ class MunicipalityMonthlyReportDownloadView(APIView):
         elements.append(summary_table)
         elements.append(Spacer(1, 10))
 
-        data = [["No.", "Codigo", "Material medico", "Tipo", "Usuario", "Cantidad"]]
+        data = [["No.", "Codigo", "Material medico", "Ingresos", "Egresos", "Existencia"]]
         row_index = 1
-        for item in movements:
-            user_name = (
-                item.user.get_full_name() or item.user.username
-                if item.user
-                else "-"
-            )
+        for item in report_data["items"]:
             data.append(
                 [
                     str(row_index),
-                    item.medication.code,
-                    item.medication.material_name,
-                    "Ingreso" if item.type == "ingreso" else "Egreso",
-                    user_name,
-                    str(item.quantity),
+                    item["code"],
+                    item["material_name"],
+                    str(item["ingresos"]),
+                    str(item["egresos"]),
+                    str(item["real_time_stock"]),
                 ]
             )
             row_index += 1
-        table = Table(data, hAlign="CENTER", colWidths=[30, 55, 235, 60, 150, 55])
+        table = Table(data, hAlign="CENTER", colWidths=[28, 50, 220, 60, 60, 95])
         table.setStyle(
             TableStyle(
                 [
@@ -301,9 +341,9 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             canvas_obj.drawString(80, info_box_top - 35, f"Usuario: {username}")
 
             # Summary pills
-            total_movements = movements.count()
-            total_ingresos = sum(1 for item in movements if item.type == "ingreso")
-            total_egresos = sum(1 for item in movements if item.type == "egreso")
+            total_movements = report_data["total_quantity"]
+            total_ingresos = report_data["total_ingresos"]
+            total_egresos = report_data["total_egresos"]
             canvas_obj.setFillColor(colors.HexColor("#eef3fb"))
             # summary moved below table
 
@@ -320,6 +360,88 @@ class MunicipalityMonthlyReportDownloadView(APIView):
 
         filename = f"reporte_{municipality.name}_{year_value}-{month_value:02d}.pdf"
         response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    def _build_excel(self, report_data, municipality, year_value, month_value, request):
+        try:
+            from io import BytesIO
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Font, PatternFill
+            from openpyxl.utils import get_column_letter
+        except Exception:
+            return Response(
+                {"detail": "Instala openpyxl para generar EXCEL (pip install openpyxl)."},
+                status=500,
+            )
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Reporte"
+
+        header_fill = PatternFill(start_color="1F4F9C", end_color="1F4F9C", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        title_font = Font(bold=True)
+        centered = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        start_col_idx = 3
+        cols = [get_column_letter(start_col_idx + i) for i in range(6)]
+        title_row_1 = 5
+        title_row_2 = 6
+        dms_row = 7
+        date_row = 8
+        user_row = 9
+        table_header_row = 10
+
+        for row in [title_row_1, title_row_2, dms_row, date_row, user_row]:
+            ws.merge_cells(f"{cols[0]}{row}:{cols[-1]}{row}")
+
+        ws[f"{cols[0]}{title_row_1}"] = "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD"
+        ws[f"{cols[0]}{title_row_2}"] = "REPORTE QUINCENAL DE INSUMOS / REACTIVOS"
+        ws[f"{cols[0]}{dms_row}"] = f"DMS/RED LOCAL: {municipality.name}"
+        ws[f"{cols[0]}{date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
+        username = request.user.get_full_name() or request.user.username
+        ws[f"{cols[0]}{user_row}"] = f"Usuario: {username}"
+
+        for row in [title_row_1, title_row_2, dms_row, date_row, user_row]:
+            ws[f"{cols[0]}{row}"].alignment = centered
+        ws[f"{cols[0]}{title_row_1}"].font = title_font
+        ws[f"{cols[0]}{title_row_2}"].font = title_font
+
+        headers = ["No.", "Codigo", "Material medico", "Ingresos", "Egresos", "Existencia"]
+        for idx, value in enumerate(headers):
+            cell = ws.cell(row=table_header_row, column=start_col_idx + idx, value=value)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = centered
+
+        row_number = 1
+        for item in report_data["items"]:
+            values = [
+                row_number,
+                item["code"],
+                item["material_name"],
+                item["ingresos"],
+                item["egresos"],
+                item["real_time_stock"],
+            ]
+            row_idx = ws.max_row + 1
+            for idx, value in enumerate(values):
+                ws.cell(row=row_idx, column=start_col_idx + idx, value=value).alignment = centered
+            row_number += 1
+
+        widths = {"C": 7, "D": 12, "E": 34, "F": 12, "G": 12, "H": 22}
+        for col, width in widths.items():
+            ws.column_dimensions[col].width = width
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        filename = f"reporte_{municipality.name}_{year_value}-{month_value:02d}.xlsx"
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
@@ -418,6 +540,17 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             sheet.freeze_panes = f"{col_letters[0]}{header_row + 1}"
             sheet.print_options.horizontalCentered = True
 
+        selected_medications = Medication.objects.order_by("material_name")
+        if medication_ids:
+            selected_medications = selected_medications.filter(id__in=medication_ids)
+        medication_items = list(selected_medications.values_list("id", "material_name"))
+
+        municipality_display_by_id = {
+            municipality.id: get_display_municipality_name(municipality.name)
+            for municipality in Municipality.objects.all()
+        }
+        ordered_municipality_names = get_report_municipality_names()
+
         # Detail data maps
         downloaded_by = request.user.get_full_name() or request.user.username
         movements = Movement.objects.filter(
@@ -502,7 +635,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
 
         ws[f"{general_cols[0]}{title_row_1}"] = "DIRECCION DEPARTAMENTAL DE REDES INTEGRADAS DE SERVICIOS DE SALUD"
         ws[f"{general_cols[0]}{title_row_2}"] = "REPORTE QUINCENAL DE INSUMOS / REACTIVOS"
-        ws[f"{general_cols[0]}{dms_row}"] = "DMS/RED LOCAL: DMS Y DRISS Local"
+        ws[f"{general_cols[0]}{dms_row}"] = "DMS/RED LOCAL: CONSOLIDADO GENERAL"
         ws[f"{general_cols[0]}{date_row}"] = f"Fecha: {timezone.localdate().strftime('%d/%m/%Y')}"
         ws[f"{general_cols[0]}{user_row}"] = f"Usuario: {downloaded_by}"
 
@@ -514,7 +647,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         ws[f"{general_cols[0]}{date_row}"].alignment = centered_alignment
         ws[f"{general_cols[0]}{user_row}"].alignment = centered_alignment
 
-        for col_idx, value in enumerate(["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
+        for col_idx, value in enumerate(["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencia"]):
             ws.cell(row=table_header_row, column=start_col_idx + col_idx, value=value)
         style_header(ws, table_header_row, general_cols)
 
@@ -524,44 +657,37 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             ingresos=Sum(Case(When(type="ingreso", then="quantity"), default=0, output_field=IntegerField())),
             egresos=Sum(Case(When(type="egreso", then="quantity"), default=0, output_field=IntegerField())),
         )
-        movement_map = {
-            (row["municipality_id"], row["medication_id"]): (row["ingresos"] or 0, row["egresos"] or 0)
-            for row in movements_summary
-        }
-        stock_map = {
-            (row["municipality_id"], row["medication_id"]): row["total"] or 0
-            for row in MunicipalityStock.objects.filter(
-                medication_id__in=medication_ids
-            ).values("municipality_id", "medication_id").annotate(total=Sum("stock"))
-        } if medication_ids else {
-            (row["municipality_id"], row["medication_id"]): row["total"] or 0
-            for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
-            .annotate(total=Sum("stock"))
-        }
+        movement_map: dict[tuple[str, int], tuple[int, int]] = {}
+        for row in movements_summary:
+            municipality_name = municipality_display_by_id.get(row["municipality_id"])
+            if not municipality_name:
+                continue
+            movement_map[(municipality_name, row["medication_id"])] = (
+                row["ingresos"] or 0,
+                row["egresos"] or 0,
+            )
 
-        keys = set(movement_map.keys()) | set(stock_map.keys())
-        municipality_ids = {k[0] for k in keys if k[0] is not None}
-        medication_ids = {k[1] for k in keys if k[1] is not None}
-        municipalities = {
-            m.id: m.name for m in Municipality.objects.filter(id__in=municipality_ids)
-        }
-        medications = {
-            m.id: m.material_name for m in Medication.objects.filter(id__in=medication_ids)
-        }
+        stock_rows = MunicipalityStock.objects.values("municipality_id", "medication_id").annotate(total=Sum("stock"))
+        if medication_ids:
+            stock_rows = stock_rows.filter(medication_id__in=medication_ids)
 
-        def sort_key(item):
-            mid, medid = item
-            return (municipalities.get(mid, ""), medications.get(medid, ""))
+        stock_map: dict[tuple[str, int], int] = {}
+        for row in stock_rows:
+            municipality_name = municipality_display_by_id.get(row["municipality_id"])
+            if not municipality_name:
+                continue
+            stock_map[(municipality_name, row["medication_id"])] = row["total"] or 0
 
-        for index, (municipality_id, medication_id) in enumerate(sorted(keys, key=sort_key), start=1):
-            mun_name = municipalities.get(municipality_id, "-")
-            med_name = medications.get(medication_id, "-")
-            ingresos_total, egresos_total = movement_map.get((municipality_id, medication_id), (0, 0))
-            stock_total = stock_map.get((municipality_id, medication_id), 0)
-            row_idx = ws.max_row + 1
-            values = [index, mun_name, med_name, ingresos_total, egresos_total, stock_total]
-            for col_idx, value in enumerate(values):
-                ws.cell(row=row_idx, column=start_col_idx + col_idx, value=value)
+        row_number = 1
+        for municipality_name in ordered_municipality_names:
+            for medication_id, medication_name in medication_items:
+                ingresos_total, egresos_total = movement_map.get((municipality_name, medication_id), (0, 0))
+                stock_total = stock_map.get((municipality_name, medication_id), 0)
+                row_idx = ws.max_row + 1
+                values = [row_number, municipality_name, medication_name, ingresos_total, egresos_total, stock_total]
+                for col_idx, value in enumerate(values):
+                    ws.cell(row=row_idx, column=start_col_idx + col_idx, value=value)
+                row_number += 1
 
         ws.column_dimensions["C"].width = 7
         ws.column_dimensions["D"].width = 24
@@ -572,10 +698,10 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         apply_table_format(ws, table_header_row, general_cols)
 
         # One sheet per municipality with summary
-        for municipality_id, municipality_name in sorted(municipalities.items(), key=lambda item: item[1]):
+        for municipality_name in ordered_municipality_names:
             # Excel sheet title max length 31 and no invalid chars
             safe_title = "".join(ch for ch in municipality_name if ch not in '\\/*?:[]')
-            safe_title = safe_title[:31] if safe_title else f"Municipio {municipality_id}"
+            safe_title = safe_title[:31] if safe_title else municipality_name
             sheet = wb.create_sheet(title=safe_title)
             muni_start_col_idx = 3  # C
             muni_cols = [get_column_letter(muni_start_col_idx + i) for i in range(4)]  # C:F
@@ -606,16 +732,14 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             sheet[f"{muni_cols[0]}{muni_date_row}"].alignment = centered_alignment
             sheet[f"{muni_cols[0]}{muni_user_row}"].alignment = centered_alignment
 
-            for col_idx, value in enumerate(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]):
+            for col_idx, value in enumerate(["Insumo", "Ingresos", "Salidas (Egresos)", "Existencia"]):
                 sheet.cell(row=muni_table_header_row, column=muni_start_col_idx + col_idx, value=value)
             style_header(sheet, muni_table_header_row, muni_cols)
-            municipality_keys = [k for k in keys if k[0] == municipality_id]
-            for med_id in sorted(municipality_keys, key=lambda k: medications.get(k[1], "")):
-                med_name = medications.get(med_id[1], "-")
-                ingresos_total, egresos_total = movement_map.get((municipality_id, med_id[1]), (0, 0))
-                stock_total = stock_map.get((municipality_id, med_id[1]), 0)
+            for medication_id, medication_name in medication_items:
+                ingresos_total, egresos_total = movement_map.get((municipality_name, medication_id), (0, 0))
+                stock_total = stock_map.get((municipality_name, medication_id), 0)
                 row_idx = sheet.max_row + 1
-                values = [med_name, ingresos_total, egresos_total, stock_total]
+                values = [medication_name, ingresos_total, egresos_total, stock_total]
                 for col_idx, value in enumerate(values):
                     sheet.cell(row=row_idx, column=muni_start_col_idx + col_idx, value=value)
             sheet.column_dimensions["C"].width = 34
@@ -654,6 +778,17 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=20, bottomMargin=20, leftMargin=36, rightMargin=36)
         styles = getSampleStyleSheet()
         elements = []
+
+        selected_medications = Medication.objects.order_by("material_name")
+        if medication_ids:
+            selected_medications = selected_medications.filter(id__in=medication_ids)
+        medication_items = list(selected_medications.values_list("id", "material_name"))
+
+        municipality_display_by_id = {
+            municipality.id: get_display_municipality_name(municipality.name)
+            for municipality in Municipality.objects.all()
+        }
+        ordered_municipality_names = get_report_municipality_names()
 
         username = request.user.get_full_name() or request.user.username
         date_label = timezone.localdate().strftime("%d/%m/%Y")
@@ -715,46 +850,44 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             ingresos=Sum(Case(When(type="ingreso", then="quantity"), default=0, output_field=IntegerField())),
             egresos=Sum(Case(When(type="egreso", then="quantity"), default=0, output_field=IntegerField())),
         )
-        movement_map = {
-            (row["municipality_id"], row["medication_id"]): (row["ingresos"] or 0, row["egresos"] or 0)
-            for row in movements_summary
-        }
-        stock_map = {
-            (row["municipality_id"], row["medication_id"]): row["total"] or 0
-            for row in MunicipalityStock.objects.filter(
-                medication_id__in=medication_ids
-            ).values("municipality_id", "medication_id").annotate(total=Sum("stock"))
-        } if medication_ids else {
-            (row["municipality_id"], row["medication_id"]): row["total"] or 0
-            for row in MunicipalityStock.objects.values("municipality_id", "medication_id")
-            .annotate(total=Sum("stock"))
-        }
-        keys = set(movement_map.keys()) | set(stock_map.keys())
-        municipality_ids = {k[0] for k in keys if k[0] is not None}
-        medication_ids = {k[1] for k in keys if k[1] is not None}
-        municipalities = {m.id: m.name for m in Municipality.objects.filter(id__in=municipality_ids)}
-        medications = {m.id: m.material_name for m in Medication.objects.filter(id__in=medication_ids)}
-
-        def sort_key(item):
-            mid, medid = item
-            return (municipalities.get(mid, ""), medications.get(medid, ""))
-
-        data = [["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencias"]]
-        for index, (municipality_id, medication_id) in enumerate(sorted(keys, key=sort_key), start=1):
-            mun_name = municipalities.get(municipality_id, "-")
-            med_name = medications.get(medication_id, "-")
-            ingresos_total, egresos_total = movement_map.get((municipality_id, medication_id), (0, 0))
-            stock_total = stock_map.get((municipality_id, medication_id), 0)
-            data.append(
-                [
-                    str(index),
-                    mun_name,
-                    med_name,
-                    str(ingresos_total),
-                    str(egresos_total),
-                    str(stock_total),
-                ]
+        movement_map: dict[tuple[str, int], tuple[int, int]] = {}
+        for row in movements_summary:
+            municipality_name = municipality_display_by_id.get(row["municipality_id"])
+            if not municipality_name:
+                continue
+            movement_map[(municipality_name, row["medication_id"])] = (
+                row["ingresos"] or 0,
+                row["egresos"] or 0,
             )
+
+        stock_rows = MunicipalityStock.objects.values("municipality_id", "medication_id").annotate(total=Sum("stock"))
+        if medication_ids:
+            stock_rows = stock_rows.filter(medication_id__in=medication_ids)
+
+        stock_map: dict[tuple[str, int], int] = {}
+        for row in stock_rows:
+            municipality_name = municipality_display_by_id.get(row["municipality_id"])
+            if not municipality_name:
+                continue
+            stock_map[(municipality_name, row["medication_id"])] = row["total"] or 0
+
+        data = [["No.", "DMS/RED LOCAL", "Insumo", "Ingresos", "Salidas (Egresos)", "Existencia"]]
+        row_number = 1
+        for municipality_name in ordered_municipality_names:
+            for medication_id, medication_name in medication_items:
+                ingresos_total, egresos_total = movement_map.get((municipality_name, medication_id), (0, 0))
+                stock_total = stock_map.get((municipality_name, medication_id), 0)
+                data.append(
+                    [
+                        str(row_number),
+                        municipality_name,
+                        medication_name,
+                        str(ingresos_total),
+                        str(egresos_total),
+                        str(stock_total),
+                    ]
+                )
+                row_number += 1
 
         table = Table(data, hAlign="CENTER", colWidths=[30, 160, 240, 70, 90, 90])
         table.setStyle(
@@ -804,7 +937,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
             canvas_obj.setFont("Helvetica-Bold", 9)
             left_x = info_box_x + 20
             right_x = info_box_x + info_box_width / 2 + 20
-            canvas_obj.drawString(left_x, info_top - 20, "DMS/RED LOCAL: DMS Y DRISS Local")
+            canvas_obj.drawString(left_x, info_top - 20, "DMS/RED LOCAL: CONSOLIDADO GENERAL")
             canvas_obj.drawString(right_x, info_top - 20, f"Fecha: {date_label}")
             canvas_obj.drawString(left_x, info_top - 35, f"Usuario: {username}")
 

@@ -15,10 +15,9 @@ export interface MunicipalityMonthlyReport {
   items: Array<{
     code: string;
     material_name: string;
-    quantity: number;
-    type: 'ingreso' | 'egreso';
-    user: string;
-    observations?: string;
+    ingresos: number;
+    egresos: number;
+    real_time_stock: number;
   }>;
 }
 
@@ -34,9 +33,9 @@ export class ReportService {
     });
   }
 
-  downloadMunicipalityMonthly(municipalityId: number, month: string) {
+  downloadMunicipalityMonthly(municipalityId: number, month: string, format: 'pdf' | 'excel' = 'pdf') {
     return this.http.get(`${this.baseUrl}download/`, {
-      params: { municipality_id: municipalityId, month },
+      params: { municipality_id: municipalityId, month, export_format: format },
       responseType: 'blob',
     });
   }

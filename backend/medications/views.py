@@ -22,7 +22,7 @@ from medications.serializers import (
     MovementSerializer,
 )
 
-GLOBAL_MUNICIPALITY_NAME = "DMS Y DRISS Local"
+GLOBAL_MUNICIPALITY_NAME = "CONSOLIDADO GENERAL"
 
 
 class MedicationViewSet(viewsets.ModelViewSet):

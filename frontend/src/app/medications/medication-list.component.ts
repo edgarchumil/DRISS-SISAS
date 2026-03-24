@@ -178,7 +178,7 @@ export class MedicationListComponent implements OnInit {
       }
       this.isAllMunicipalities = true;
       this.selectedMunicipalityId = null;
-      this.selectedMunicipalityName = 'DMS Y DRISS Local';
+      this.selectedMunicipalityName = 'CONSOLIDADO GENERAL';
       this.municipalityError = '';
       this.stockSaveError = '';
       this.setPhysicalStockDisabled(true);
