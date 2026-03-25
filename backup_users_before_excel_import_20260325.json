@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "username": "echumila",
+    "email": "edgarcha91@gmail.com",
+    "first_name": "Edgar",
+    "last_name": "Chumil",
+    "is_superuser": true,
+    "is_staff": true,
+    "is_active": true,
+    "groups": [
+      "administradores"
+    ],
+    "municipality": "DMS Sololá"
+  },
+  {
+    "id": 20,
+    "username": "Antonio",
+    "email": "tono.tsr@gmail.com",
+    "first_name": "Antonio",
+    "last_name": "Tambriz",
+    "is_superuser": false,
+    "is_staff": false,
+    "is_active": true,
+    "groups": [
+      "administradores"
+    ],
+    "municipality": "DMS Nahuala"
+  },
+  {
+    "id": 21,
+    "username": "admin",
+    "email": "admin123@gmail.com",
+    "first_name": "Admin",
+    "last_name": "Adminn",
+    "is_superuser": false,
+    "is_staff": false,
+    "is_active": true,
+    "groups": [
+      "administradores"
+    ],
+    "municipality": ""
+  },
+  {
+    "id": 22,
+    "username": "echumila1",
+    "email": "Ed@gmail.com",
+    "first_name": "EDgar",
+    "last_name": "Chag",
+    "is_superuser": false,
+    "is_staff": false,
+    "is_active": true,
+    "groups": [
+      "usuarios"
+    ],
+    "municipality": "DMS Sololá"
+  }
+]

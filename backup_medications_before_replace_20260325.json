@@ -1,0 +1,156 @@
+[
+  {
+    "id": 2,
+    "category": "Cat 13",
+    "code": "1012",
+    "material_name": "Bolsas blancos grandes",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 19:37:13.722000+00:00",
+    "updated_at": "2026-02-03 16:56:24.021000+00:00"
+  },
+  {
+    "id": 3,
+    "category": "Cat 01",
+    "code": "1011",
+    "material_name": "Bolsas rojas medianas",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:27:31.176000+00:00",
+    "updated_at": "2026-02-03 16:56:24.023000+00:00"
+  },
+  {
+    "id": 4,
+    "category": "Cat 02",
+    "code": "1013",
+    "material_name": "Bolsas blancas medianas",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:28:50.904000+00:00",
+    "updated_at": "2026-02-26 21:58:09.795741+00:00"
+  },
+  {
+    "id": 5,
+    "category": "Cat 03",
+    "code": "1014",
+    "material_name": "Cajas Petri",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:29:28.080000+00:00",
+    "updated_at": "2026-02-02 03:26:01.736000+00:00"
+  },
+  {
+    "id": 6,
+    "category": "Cat 05",
+    "code": "1015",
+    "material_name": "Membranas de filtración",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:30:16.776000+00:00",
+    "updated_at": "2026-02-02 03:26:01.737000+00:00"
+  },
+  {
+    "id": 7,
+    "category": "Cat 06",
+    "code": "1016",
+    "material_name": "Medios de cultivo coli..",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:31:25.760000+00:00",
+    "updated_at": "2026-02-02 03:26:01.739000+00:00"
+  },
+  {
+    "id": 8,
+    "category": "Cat 08",
+    "code": "1018",
+    "material_name": "DPD Cloro Residual",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:32:17.040000+00:00",
+    "updated_at": "2026-02-03 17:29:16.781000+00:00"
+  },
+  {
+    "id": 9,
+    "category": "Cat 10",
+    "code": "1020",
+    "material_name": "Hipoclorito de calcio",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:50:49.815000+00:00",
+    "updated_at": "2026-02-02 03:26:01.742000+00:00"
+  },
+  {
+    "id": 10,
+    "category": "Cat 11",
+    "code": "1021",
+    "material_name": "Hojas para inscripción sanitarias",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:51:28.232000+00:00",
+    "updated_at": "2026-02-02 03:26:01.744000+00:00"
+  },
+  {
+    "id": 11,
+    "category": "Cat 12",
+    "code": "1022",
+    "material_name": "Fichas de inscripción ventas callejeras",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:52:19.864000+00:00",
+    "updated_at": "2026-02-02 03:26:01.746000+00:00"
+  },
+  {
+    "id": 12,
+    "category": "Cat 15",
+    "code": "1023",
+    "material_name": "Collares de perros",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:53:11.264000+00:00",
+    "updated_at": "2026-02-02 03:26:01.747000+00:00"
+  },
+  {
+    "id": 13,
+    "category": "Cat 15",
+    "code": "1025",
+    "material_name": "Grapas para collares de perros",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:53:46.904000+00:00",
+    "updated_at": "2026-02-02 03:26:01.749000+00:00"
+  },
+  {
+    "id": 14,
+    "category": "Cat 16",
+    "code": "1026",
+    "material_name": "Carné de vacunación de perros",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-19 22:54:26.416000+00:00",
+    "updated_at": "2026-02-02 03:26:01.750000+00:00"
+  },
+  {
+    "id": 15,
+    "category": "Cat 01",
+    "code": "1010",
+    "material_name": "Bolsas rojas grandes",
+    "monthly_demand_avg": "0.00",
+    "physical_stock": 0,
+    "months_of_supply": "0.00",
+    "created_at": "2026-01-20 00:57:57.371000+00:00",
+    "updated_at": "2026-02-26 21:58:09.803681+00:00"
+  }
+]
