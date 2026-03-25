@@ -8,6 +8,8 @@ from django.dispatch import receiver
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     municipality = models.CharField(max_length=120, blank=True, default="")
+    must_change_password = models.BooleanField(default=False)
+    temporary_password = models.CharField(max_length=128, blank=True, default="")
 
     def __str__(self):
         return f"{self.user.username} - {self.municipality}".strip(" -")

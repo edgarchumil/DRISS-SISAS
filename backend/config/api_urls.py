@@ -1,8 +1,8 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.views import LogoutView, UserViewSet
+from accounts.views import ChangeOwnPasswordView, LogoutView, SISASTokenObtainPairView, UserViewSet
 from backup.views import BackupDownloadView
 from dashboard.views import DashboardChartsView, DashboardStatsView
 from medications.views import (
@@ -74,9 +74,10 @@ urlpatterns = [
     path("dashboard/stats/", DashboardStatsView.as_view(), name="dashboard_stats"),
     path("dashboard/charts/", DashboardChartsView.as_view(), name="dashboard_charts"),
     path("backup/download/", BackupDownloadView.as_view(), name="backup_download"),
-    path("auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/token/", SISASTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/logout/", LogoutView.as_view(), name="token_logout"),
+    path("auth/change-password/", ChangeOwnPasswordView.as_view(), name="change_own_password"),
 ]
 
 urlpatterns += router.urls

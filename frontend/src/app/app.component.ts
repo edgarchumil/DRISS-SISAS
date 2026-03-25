@@ -16,11 +16,12 @@ import {
 
 import { AuthService } from './core/auth.service';
 import { LoadingService } from './core/loading.service';
+import { ChangePasswordComponent } from './auth/change-password.component';
 import { SidePanelComponent } from './shared/side-panel.component';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, SidePanelComponent],
+  imports: [CommonModule, RouterOutlet, SidePanelComponent, ChangePasswordComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -43,8 +44,8 @@ export class AppComponent implements OnInit, OnDestroy {
         event instanceof NavigationCancel ||
         event instanceof NavigationError
     ),
-    map(() => this.authService.hasSession() && !this.router.url.startsWith('/login')),
-    startWith(this.authService.hasSession() && !this.router.url.startsWith('/login')),
+    map(() => this.authService.hasSession() && !this.router.url.startsWith('/login') && !this.router.url.startsWith('/change-password')),
+    startWith(this.authService.hasSession() && !this.router.url.startsWith('/login') && !this.router.url.startsWith('/change-password')),
     distinctUntilChanged(),
     observeOn(asyncScheduler)
   );
@@ -81,6 +82,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return (
         this.authService.hasSession() &&
         !path.startsWith('/login') &&
+        !path.startsWith('/change-password') &&
         !path.startsWith('/dashboard') &&
         !path.startsWith('/medications') &&
         !path.startsWith('/movements') &&
@@ -93,6 +95,7 @@ export class AppComponent implements OnInit, OnDestroy {
   startWith(
     this.authService.hasSession() &&
       !this.router.url.startsWith('/login') &&
+      !this.router.url.startsWith('/change-password') &&
       !this.router.url.startsWith('/dashboard') &&
       !this.router.url.startsWith('/medications') &&
       !this.router.url.startsWith('/movements') &&
@@ -169,5 +172,11 @@ export class AppComponent implements OnInit, OnDestroy {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  get showPasswordChangeModal() {
+    return this.authService.hasSession() &&
+      this.authService.requiresPasswordChange() &&
+      !this.router.url.startsWith('/login');
   }
 }

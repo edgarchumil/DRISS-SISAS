@@ -226,9 +226,23 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             )
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=20, bottomMargin=20)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            topMargin=20,
+            bottomMargin=20,
+            leftMargin=24,
+            rightMargin=24,
+        )
         styles = getSampleStyleSheet()
         elements = []
+        wrapped_cell_style = styles["BodyText"].clone("wrapped_cell_style")
+        wrapped_cell_style.fontName = "Helvetica"
+        wrapped_cell_style.fontSize = 8.5
+        wrapped_cell_style.leading = 10
+        wrapped_cell_style.spaceBefore = 0
+        wrapped_cell_style.spaceAfter = 0
+        wrapped_cell_style.wordWrap = "CJK"
 
         total_movements = report_data["total_quantity"]
         total_ingresos = report_data["total_ingresos"]
@@ -268,15 +282,15 @@ class MunicipalityMonthlyReportDownloadView(APIView):
             data.append(
                 [
                     str(row_index),
-                    item["code"],
-                    item["material_name"],
+                    Paragraph(str(item["code"]), wrapped_cell_style),
+                    Paragraph(item["material_name"], wrapped_cell_style),
                     str(item["ingresos"]),
                     str(item["egresos"]),
                     str(item["real_time_stock"]),
                 ]
             )
             row_index += 1
-        table = Table(data, hAlign="CENTER", colWidths=[28, 50, 220, 60, 60, 95])
+        table = Table(data, hAlign="CENTER", repeatRows=1, colWidths=[28, 78, 210, 55, 55, 85])
         table.setStyle(
             TableStyle(
                 [
@@ -778,6 +792,13 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
         doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=20, bottomMargin=20, leftMargin=36, rightMargin=36)
         styles = getSampleStyleSheet()
         elements = []
+        wrapped_cell_style = styles["BodyText"].clone("consolidated_wrapped_cell_style")
+        wrapped_cell_style.fontName = "Helvetica"
+        wrapped_cell_style.fontSize = 8.5
+        wrapped_cell_style.leading = 10
+        wrapped_cell_style.spaceBefore = 0
+        wrapped_cell_style.spaceAfter = 0
+        wrapped_cell_style.wordWrap = "CJK"
 
         selected_medications = Medication.objects.order_by("material_name")
         if medication_ids:
@@ -880,8 +901,8 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
                 data.append(
                     [
                         str(row_number),
-                        municipality_name,
-                        medication_name,
+                        Paragraph(municipality_name, wrapped_cell_style),
+                        Paragraph(medication_name, wrapped_cell_style),
                         str(ingresos_total),
                         str(egresos_total),
                         str(stock_total),
@@ -889,7 +910,7 @@ class AllMunicipalitiesMonthlyReportDownloadView(APIView):
                 )
                 row_number += 1
 
-        table = Table(data, hAlign="CENTER", colWidths=[30, 160, 240, 70, 90, 90])
+        table = Table(data, hAlign="CENTER", repeatRows=1, colWidths=[30, 150, 250, 65, 85, 85])
         table.setStyle(
             TableStyle(
                 [

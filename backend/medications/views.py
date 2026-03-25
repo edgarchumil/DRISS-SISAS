@@ -12,8 +12,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 
-from accounts.permissions import MedicationAccessPermission
-from medications.municipality_catalog import ORDERED_MUNICIPALITY_CATALOG
+from accounts.permissions import MedicationAccessPermission, ROLE_ADMIN, user_in_group
+from medications.municipality_catalog import (
+    ORDERED_MUNICIPALITY_CATALOG,
+    get_display_municipality_name,
+    normalize_municipality_name,
+)
 from medications.models import Medication, Municipality, MunicipalityStock, Movement
 from medications.serializers import (
     MedicationSerializer,
@@ -35,17 +39,17 @@ class MedicationViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         municipality_id = self._get_requested_municipality_id()
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            data = list(serializer.data)
-            self._inject_two_month_average(data, municipality_id=municipality_id)
-            return self.get_paginated_response(data)
-
         serializer = self.get_serializer(queryset, many=True)
         data = list(serializer.data)
         self._inject_two_month_average(data, municipality_id=municipality_id)
-        return Response(data)
+        return Response(
+            {
+                "count": len(data),
+                "next": None,
+                "previous": None,
+                "results": data,
+            }
+        )
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
@@ -355,6 +359,33 @@ class MovementViewSet(viewsets.ModelViewSet):
     queryset = Movement.objects.select_related("medication", "municipality", "user").all()
     serializer_class = MovementSerializer
     permission_classes = [MedicationAccessPermission]
+
+    def get_queryset(self):
+        queryset = super().get_queryset().order_by("-created_at", "-id")
+        if user_in_group(self.request.user, ROLE_ADMIN):
+            return queryset
+
+        municipality_name = ""
+        if hasattr(self.request.user, "profile"):
+            municipality_name = (self.request.user.profile.municipality or "").strip()
+
+        if not municipality_name:
+            return queryset.none()
+
+        normalized_target = normalize_municipality_name(
+            get_display_municipality_name(municipality_name)
+        )
+        matching_ids = []
+        for municipality in Municipality.objects.all():
+            if normalize_municipality_name(
+                get_display_municipality_name(municipality.name)
+            ) == normalized_target:
+                matching_ids.append(municipality.id)
+
+        if not matching_ids:
+            return queryset.none()
+
+        return queryset.filter(municipality_id__in=matching_ids)
 
     @action(detail=False, methods=["post"], url_path="dispatch-report")
     def dispatch_report(self, request):

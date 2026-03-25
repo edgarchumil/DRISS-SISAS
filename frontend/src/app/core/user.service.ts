@@ -11,6 +11,11 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
+interface CredentialEmailResponse {
+  mailto_url: string;
+  detail: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly baseUrl = `${API_BASE_URL}/users`;
@@ -40,5 +45,9 @@ export class UserService {
 
   remove(id: number) {
     return this.http.delete(`${this.baseUrl}/${id}/`);
+  }
+
+  credentialEmail(id: number) {
+    return this.http.post<CredentialEmailResponse>(`${this.baseUrl}/${id}/credential-email/`, {});
   }
 }

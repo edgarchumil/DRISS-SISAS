@@ -21,12 +21,19 @@
     <div class="municipality-controls">
       <label>
         DMS/RED LOCAL
+        <input
+          *ngIf="!isAdmin && !!userMunicipality"
+          type="text"
+          [value]="lockedMunicipalityLabel"
+          readonly
+        />
         <select
+          *ngIf="isAdmin || !userMunicipality"
           #municipalitySelect
           [value]="isAllMunicipalities ? 'all' : (selectedMunicipalityId ?? '')"
-          [disabled]="!isAdmin && !!userMunicipality"
           (change)="onMunicipalityChange(municipalitySelect.value)"
         >
+          <option value="" disabled>Selecciona DMS/RED LOCAL</option>
           <option value="all" *ngIf="isAdmin">CONSOLIDADO GENERAL</option>
           <option *ngFor="let municipality of municipalities" [value]="municipality.id">
             {{ municipality.name }}

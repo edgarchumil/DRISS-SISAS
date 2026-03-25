@@ -15,6 +15,7 @@ class MunicipalityField(serializers.CharField):
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     municipality = MunicipalityField(required=False, allow_blank=True)
+    must_change_password = serializers.SerializerMethodField(read_only=True)
     roles = serializers.SlugRelatedField(
         slug_field="name",
         queryset=Group.objects.all(),
@@ -34,8 +35,26 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "password",
             "municipality",
+            "must_change_password",
             "roles",
         ]
+
+    def get_must_change_password(self, instance):
+        try:
+            return bool(instance.profile.must_change_password)
+        except UserProfile.DoesNotExist:
+            return False
+
+    def _apply_password_state(self, user, password):
+        is_temporary = bool(password) and password[0].isdigit()
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "municipality": getattr(user.profile, "municipality", "") if hasattr(user, "profile") else "",
+                "must_change_password": is_temporary,
+                "temporary_password": password if is_temporary else "",
+            },
+        )
 
     def validate(self, attrs):
         if self.instance is None:
@@ -53,7 +72,15 @@ class UserSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        UserProfile.objects.update_or_create(user=user, defaults={"municipality": municipality})
+        is_temporary = bool(password) and password[0].isdigit()
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "municipality": municipality,
+                "must_change_password": is_temporary,
+                "temporary_password": password if is_temporary else "",
+            },
+        )
         if groups:
             user.groups.set(groups)
         return user
@@ -68,8 +95,23 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         if municipality is not None:
+            profile_defaults = {"municipality": municipality}
+            if password:
+                is_temporary = password[0].isdigit()
+                profile_defaults["must_change_password"] = is_temporary
+                profile_defaults["temporary_password"] = password if is_temporary else ""
+            UserProfile.objects.update_or_create(user=instance, defaults=profile_defaults)
+        elif password:
+            is_temporary = password[0].isdigit()
             UserProfile.objects.update_or_create(
-                user=instance, defaults={"municipality": municipality}
+                user=instance,
+                defaults={
+                    "municipality": getattr(instance.profile, "municipality", "")
+                    if hasattr(instance, "profile")
+                    else "",
+                    "must_change_password": is_temporary,
+                    "temporary_password": password if is_temporary else "",
+                },
             )
         if groups is not None:
             instance.groups.set(groups)

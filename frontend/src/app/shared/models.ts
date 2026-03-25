@@ -16,6 +16,7 @@ export interface UserAccount {
   first_name: string;
   last_name: string;
   municipality?: string;
+  must_change_password?: boolean;
   is_active: boolean;
   roles: string[];
   password?: string;

@@ -10,6 +10,7 @@ import { MovementService } from '../core/movement.service';
 import { MunicipalityService } from '../core/municipality.service';
 import { StockEventsService } from '../core/stock-events.service';
 import { UserService } from '../core/user.service';
+import { getDisplayMunicipalityName, municipalityNamesMatch } from '../shared/municipality-catalog';
 import { Medication, Movement, Municipality } from '../shared/models';
 
 type MovementType = 'ingreso' | 'egreso';
@@ -314,18 +315,11 @@ export class MovementsComponent implements OnInit {
   }
 
   private normalizeText(value: string) {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return getDisplayMunicipalityName(value);
   }
 
   private canonicalMunicipalityName(value: string) {
-    return this.normalizeText(value)
-      .replace(/\b(dms|red|driss|local)\b/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return this.normalizeText(value);
   }
 
   private syncUserMunicipalitySelection() {
@@ -335,14 +329,9 @@ export class MovementsComponent implements OnInit {
       return;
     }
 
-    const target = this.canonicalMunicipalityName(this.currentMunicipality);
-    const match = this.municipalities.find((item) => {
-      const candidate = this.canonicalMunicipalityName(item.name);
-      if (!target || !candidate) {
-        return false;
-      }
-      return candidate === target || candidate.includes(target) || target.includes(candidate);
-    });
+    const match = this.municipalities.find((item) =>
+      municipalityNamesMatch(item.name, this.currentMunicipality)
+    );
 
     if (match) {
       this.userMunicipalityLocked = true;

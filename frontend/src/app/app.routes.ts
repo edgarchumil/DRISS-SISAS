@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { adminGuard } from './core/admin.guard';
 import { authGuard } from './core/auth.guard';
+import { ChangePasswordComponent } from './auth/change-password.component';
 import { LoginComponent } from './auth/login.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { MedicationFormComponent } from './medications/medication-form.component';
@@ -16,6 +17,7 @@ import { BackupComponent } from './backup/backup.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  { path: 'change-password', component: ChangePasswordComponent, canActivate: [authGuard] },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   {
     path: 'medications',

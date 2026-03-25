@@ -8,6 +8,7 @@ import { LoadingService } from './loading.service';
 interface TokenResponse {
   access: string;
   refresh: string;
+  must_change_password?: boolean;
 }
 
 interface RefreshResponse {
@@ -19,6 +20,7 @@ export class AuthService {
   private readonly accessKey = 'access_token';
   private readonly refreshKey = 'refresh_token';
   private readonly activityKey = 'last_activity_at';
+  private readonly passwordChangeKey = 'must_change_password';
   private readonly loggedIn$ = new BehaviorSubject<boolean>(this.hasSession());
 
   constructor(private http: HttpClient, private loadingService: LoadingService) {}
@@ -32,6 +34,7 @@ export class AuthService {
           localStorage.setItem(this.accessKey, tokens.access);
           localStorage.setItem(this.refreshKey, tokens.refresh);
           localStorage.setItem(this.activityKey, String(Date.now()));
+          localStorage.setItem(this.passwordChangeKey, tokens.must_change_password ? '1' : '0');
           this.loggedIn$.next(true);
         }),
         map(() => true),
@@ -93,6 +96,7 @@ export class AuthService {
     localStorage.removeItem(this.accessKey);
     localStorage.removeItem(this.refreshKey);
     localStorage.removeItem(this.activityKey);
+    localStorage.removeItem(this.passwordChangeKey);
     this.loggedIn$.next(false);
   }
 
@@ -130,5 +134,20 @@ export class AuthService {
 
   private hasToken() {
     return Boolean(localStorage.getItem(this.accessKey));
+  }
+
+  requiresPasswordChange() {
+    return localStorage.getItem(this.passwordChangeKey) === '1';
+  }
+
+  clearPasswordChangeRequired() {
+    localStorage.setItem(this.passwordChangeKey, '0');
+  }
+
+  changePassword(current_password: string, new_password: string) {
+    return this.http.post<{ detail: string }>(`${AUTH_BASE_URL}/change-password/`, {
+      current_password,
+      new_password,
+    });
   }
 }

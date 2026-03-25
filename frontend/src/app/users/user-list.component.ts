@@ -35,6 +35,7 @@ export class UserListComponent implements OnInit {
   ];
   municipalities: Municipality[] = [];
   showPassword = false;
+  mailError = '';
 
   private fb = inject(FormBuilder);
   private userService = inject(UserService);
@@ -143,6 +144,27 @@ export class UserListComponent implements OnInit {
       return;
     }
     this.showPassword = !this.showPassword;
+  }
+
+  canSendCredentials(user: UserAccount) {
+    return Boolean(
+      user.email &&
+      user.must_change_password &&
+      !(user.roles || []).includes('administradores')
+    );
+  }
+
+  sendCredentials(user: UserAccount) {
+    this.mailError = '';
+    this.userService.credentialEmail(user.id).subscribe({
+      next: (response) => {
+        window.location.href = response.mailto_url;
+      },
+      error: (error) => {
+        const detail = error?.error?.detail;
+        this.mailError = typeof detail === 'string' ? detail : 'No se pudo preparar el correo.';
+      },
+    });
   }
 
   submit() {

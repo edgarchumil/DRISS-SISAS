@@ -8,6 +8,7 @@ import { MedicationService } from '../core/medication.service';
 import { MunicipalityService } from '../core/municipality.service';
 import { StockEventsService } from '../core/stock-events.service';
 import { UserService } from '../core/user.service';
+import { getDisplayMunicipalityName, municipalityNamesMatch } from '../shared/municipality-catalog';
 import { Medication, Municipality, MunicipalityStockItem } from '../shared/models';
 
 @Component({
@@ -41,6 +42,9 @@ export class MedicationListComponent implements OnInit {
   editingBaseStock = 0;
   isAdmin = false;
   userMunicipality = '';
+  private currentUserLoaded = false;
+  private municipalitiesLoaded = false;
+  private initialSelectionResolved = false;
 
   private fb = inject(FormBuilder);
   private medicationService = inject(MedicationService);
@@ -59,9 +63,11 @@ export class MedicationListComponent implements OnInit {
 
   ngOnInit() {
     this.loadCurrentUser();
-    this.fetch();
     this.loadMunicipalities();
     this.stockEvents.refresh$.subscribe(() => {
+      if (!this.initialSelectionResolved) {
+        return;
+      }
       this.fetch();
       if (this.isAllMunicipalities) {
         this.onMunicipalityChange('all');
@@ -100,7 +106,13 @@ export class MedicationListComponent implements OnInit {
     this.municipalityService.list().subscribe({
       next: (response) => {
         this.municipalities = response.results;
-        this.applyInitialMunicipalitySelection();
+        this.municipalitiesLoaded = true;
+        this.resolveInitialMunicipalitySelection();
+      },
+      error: () => {
+        this.municipalities = [];
+        this.municipalitiesLoaded = true;
+        this.resolveInitialMunicipalitySelection();
       },
     });
   }
@@ -110,24 +122,31 @@ export class MedicationListComponent implements OnInit {
       next: (user) => {
         this.userMunicipality = (user.municipality || '').trim();
         this.isAdmin = (user.roles || []).includes('administradores');
-        this.applyInitialMunicipalitySelection();
+        this.currentUserLoaded = true;
+        this.resolveInitialMunicipalitySelection();
+      },
+      error: () => {
+        this.userMunicipality = '';
+        this.isAdmin = false;
+        this.currentUserLoaded = true;
+        this.resolveInitialMunicipalitySelection();
       },
     });
   }
 
-  private applyInitialMunicipalitySelection() {
-    if (!this.municipalities.length) {
+  private resolveInitialMunicipalitySelection() {
+    if (this.initialSelectionResolved || !this.currentUserLoaded || !this.municipalitiesLoaded) {
       return;
     }
+
+    this.initialSelectionResolved = true;
 
     if (this.isAdmin) {
-      if (!this.isAllMunicipalities || this.selectedMunicipalityId !== null) {
-        this.onMunicipalityChange('all');
-      }
+      this.onMunicipalityChange('all');
       return;
     }
 
-    if (this.userMunicipality) {
+    if (this.userMunicipality && this.municipalities.length) {
       const match = this.matchMunicipalityByName(this.userMunicipality);
       if (match) {
         this.onMunicipalityChange(String(match.id));
@@ -135,22 +154,19 @@ export class MedicationListComponent implements OnInit {
       }
     }
 
-    if (!this.selectedMunicipalityId && !this.isAllMunicipalities) {
-      this.onMunicipalityChange('');
-    }
+    this.onMunicipalityChange('');
   }
 
   private normalizeText(value: string) {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return getDisplayMunicipalityName(value);
+  }
+
+  get lockedMunicipalityLabel() {
+    return this.selectedMunicipalityName || this.normalizeText(this.userMunicipality) || '';
   }
 
   private matchMunicipalityByName(name: string) {
-    const target = this.normalizeText(name);
-    return this.municipalities.find((item) => this.normalizeText(item.name) === target);
+    return this.municipalities.find((item) => municipalityNamesMatch(item.name, name));
   }
 
   onMunicipalityChange(value: string) {

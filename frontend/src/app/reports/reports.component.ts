@@ -8,6 +8,7 @@ import { MedicationService } from '../core/medication.service';
 import { MunicipalityService } from '../core/municipality.service';
 import { ReportService, MunicipalityMonthlyReport } from '../core/report.service';
 import { UserService } from '../core/user.service';
+import { getDisplayMunicipalityName, municipalityNamesMatch } from '../shared/municipality-catalog';
 import { Medication, Municipality } from '../shared/models';
 
 @Component({
@@ -202,16 +203,11 @@ export class ReportsComponent implements OnInit {
   }
 
   private normalizeText(value: string) {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return getDisplayMunicipalityName(value);
   }
 
   private matchMunicipalityByName(name: string) {
-    const target = this.normalizeText(name);
-    return this.municipalities.find((item) => this.normalizeText(item.name) === target);
+    return this.municipalities.find((item) => municipalityNamesMatch(item.name, name));
   }
 
   private getCurrentMonth() {
