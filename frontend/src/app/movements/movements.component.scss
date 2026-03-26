@@ -122,7 +122,8 @@ td {
   border-radius: 18px;
   padding: 2rem;
   box-shadow: 0 25px 60px rgba(10, 61, 145, 0.2);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.2rem;
 }
 
@@ -151,10 +152,15 @@ td {
   font-size: 0.85rem;
 }
 
-.modal-card form {
+.movement-form {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.movement-form-body {
   display: grid;
   gap: 0.9rem;
-  max-height: calc(100vh - 12rem);
+  max-height: calc(100vh - 18rem);
   overflow-y: auto;
   padding-right: 0.25rem;
 }
@@ -177,7 +183,7 @@ td {
 .ingreso-list {
   display: grid;
   gap: 0.4rem;
-  max-height: 360px;
+  max-height: 340px;
   overflow-y: auto;
   padding-right: 0.2rem;
 }
@@ -213,8 +219,8 @@ td {
 
 .egreso-list {
   display: grid;
-  gap: 0.8rem;
-  max-height: 420px;
+  gap: 0.4rem;
+  max-height: 340px;
   overflow-y: auto;
   padding-right: 0.2rem;
 }
@@ -267,12 +273,12 @@ td {
   display: flex;
   justify-content: flex-end;
   gap: 0.8rem;
-  position: sticky;
-  bottom: 0;
   background: #fff;
-  padding-top: 0.75rem;
-  margin-top: 0.4rem;
+  padding-top: 1rem;
+  margin-top: auto;
+  border-top: 1px solid var(--sisas-border);
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .pagination {
@@ -339,8 +345,8 @@ td {
     max-height: calc(100vh - 2rem);
   }
 
-  .modal-card form {
-    max-height: calc(100vh - 9rem);
+  .movement-form-body {
+    max-height: calc(100vh - 15rem);
   }
 
   .ingreso-row {

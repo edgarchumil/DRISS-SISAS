@@ -89,53 +89,55 @@
         <p>Completa el formulario para registrar el movimiento.</p>
       </header>
 
-      <form [formGroup]="activeForm" (ngSubmit)="submit()">
-        <ng-container *ngIf="selectedType === 'ingreso'; else egresoFormTemplate">
-          <div class="ingreso-list">
-            <div class="ingreso-row" *ngFor="let med of medications">
-              <span>{{ med.material_name }}</span>
-              <input type="number" min="0" [formControlName]="'' + med.id" />
+      <form class="movement-form" [formGroup]="activeForm" (ngSubmit)="submit()">
+        <div class="movement-form-body">
+          <ng-container *ngIf="selectedType === 'ingreso'; else egresoFormTemplate">
+            <div class="ingreso-list">
+              <div class="ingreso-row" *ngFor="let med of medications">
+                <span>{{ med.material_name }}</span>
+                <input type="number" min="0" [formControlName]="'' + med.id" />
+              </div>
             </div>
-          </div>
-          <label>
-            Observaciones
-            <textarea rows="3" [formControl]="ingresoNotes"></textarea>
-          </label>
-        </ng-container>
+            <label>
+              Observaciones
+              <textarea rows="3" [formControl]="ingresoNotes"></textarea>
+            </label>
+          </ng-container>
 
-        <ng-template #egresoFormTemplate>
-          <div class="egreso-list">
-            <div class="ingreso-row" *ngFor="let med of medications">
-              <span>{{ med.material_name }}</span>
-              <input type="number" min="0" [formControlName]="'' + med.id" />
+          <ng-template #egresoFormTemplate>
+            <div class="egreso-list">
+              <div class="ingreso-row" *ngFor="let med of medications">
+                <span>{{ med.material_name }}</span>
+                <input type="number" min="0" [formControlName]="'' + med.id" />
+              </div>
             </div>
-          </div>
-          <label>
-            Observaciones
-            <textarea rows="3" [formControl]="egresoNotes"></textarea>
-          </label>
-        </ng-template>
+            <label>
+              Observaciones
+              <textarea rows="3" [formControl]="egresoNotes"></textarea>
+            </label>
+          </ng-template>
 
-        <div class="field-error" *ngIf="movementError">{{ movementError }}</div>
-
-        <div class="modal-actions">
-          <button type="button" class="secondary" (click)="closeFormModal()">Cancelar</button>
-          <button
-            type="button"
-            *ngIf="selectedType === 'ingreso'"
-            (click)="submit()"
-          >
-            Guardar
-          </button>
-          <button
-            type="button"
-            *ngIf="selectedType === 'egreso'"
-            (click)="openConfirmModal()"
-          >
-            Despachar
-          </button>
+          <div class="field-error" *ngIf="movementError">{{ movementError }}</div>
         </div>
       </form>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary" (click)="closeFormModal()">Cancelar</button>
+        <button
+          type="button"
+          *ngIf="selectedType === 'ingreso'"
+          (click)="submit()"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          *ngIf="selectedType === 'egreso'"
+          (click)="openConfirmModal()"
+        >
+          Despachar
+        </button>
+      </div>
     </div>
   </div>
 
