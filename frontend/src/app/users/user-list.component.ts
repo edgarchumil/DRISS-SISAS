@@ -72,7 +72,11 @@ export class UserListComponent implements OnInit {
     this.isLoading = true;
     this.userService.list(this.searchTerm.trim() || undefined).subscribe({
       next: (response) => {
-        this.users = response.results;
+        this.users = [...response.results].sort((a, b) =>
+          this.getDisplayName(a).localeCompare(this.getDisplayName(b), 'es', {
+            sensitivity: 'base',
+          })
+        );
         this.currentPage = 1;
         this.updatePagination();
         this.isLoading = false;
@@ -229,6 +233,10 @@ export class UserListComponent implements OnInit {
     return roles
       .map((role) => (role === 'administradores' ? 'Administrador' : 'Usuario'))
       .join(' o ');
+  }
+
+  private getDisplayName(user: UserAccount) {
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim();
   }
 
   private requireOneRole(control: AbstractControl) {

@@ -111,6 +111,10 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
+        if (this.authService.hasSession() && this.router.url.startsWith('/change-password')) {
+          this.router.navigate(['/dashboard']);
+          return;
+        }
         this.resetIdleTimer();
       }
     });

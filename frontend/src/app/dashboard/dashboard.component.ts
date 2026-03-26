@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 
 import { AuthService } from '../core/auth.service';
 import { DashboardCharts, DashboardService, DashboardStats } from '../core/dashboard.service';
+import { UserService } from '../core/user.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -26,6 +27,7 @@ export class DashboardComponent implements OnInit {
     isSelected: boolean;
   }> = [];
   selectedDate: Date | null = null;
+  isAdmin = false;
 
   private readonly monthNames = [
     'Enero',
@@ -44,12 +46,25 @@ export class DashboardComponent implements OnInit {
 
   private dashboardService = inject(DashboardService);
   private authService = inject(AuthService);
+  private userService = inject(UserService);
   private router = inject(Router);
 
   ngOnInit() {
+    this.loadCurrentUser();
     this.loadStats();
     this.loadCharts();
     this.buildCalendar();
+  }
+
+  loadCurrentUser() {
+    this.userService.me().subscribe({
+      next: (user) => {
+        this.isAdmin = (user.roles || []).includes('administradores');
+      },
+      error: () => {
+        this.isAdmin = false;
+      },
+    });
   }
 
   loadStats() {

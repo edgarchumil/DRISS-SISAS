@@ -21,15 +21,10 @@
         <strong>{{ stats?.materials_total ?? 0 }}</strong>
         <small>Total registrados</small>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" *ngIf="isAdmin">
         <span>Usuarios</span>
         <strong>{{ stats?.users_active ?? 0 }}</strong>
         <small>Activos de {{ stats?.users_total ?? 0 }}</small>
-      </div>
-      <div class="stat-card">
-        <span>Calificacion</span>
-        <strong>{{ stats?.service_rating ?? 0 }}</strong>
-        <small>Servicio</small>
       </div>
     </div>
 
@@ -89,7 +84,7 @@
         </ng-template>
         <button class="panel-action" routerLink="/movements">Ver movimientos</button>
       </article>
-      <article class="panel">
+      <article class="panel" *ngIf="isAdmin">
         <header>Agenda</header>
         <div class="calendar-header">
           <button type="button" class="calendar-nav" (click)="prevMonth()">‹</button>

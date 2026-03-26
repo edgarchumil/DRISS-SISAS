@@ -32,6 +32,15 @@ export class ChangePasswordComponent {
   submit() {
     if (this.form.invalid || this.isSubmitting) {
       this.form.markAllAsTouched();
+      if (this.form.controls.current_password.errors?.['required']) {
+        this.errorMessage = 'Debes ingresar la contraseña actual.';
+      } else if (this.form.controls.new_password.errors?.['required']) {
+        this.errorMessage = 'Debes ingresar una nueva contraseña.';
+      } else if (this.form.controls.new_password.errors?.['minlength']) {
+        this.errorMessage = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      } else if (this.form.controls.confirm_password.errors?.['required']) {
+        this.errorMessage = 'Debes confirmar la nueva contraseña.';
+      }
       return;
     }
 
